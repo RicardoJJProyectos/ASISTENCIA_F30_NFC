@@ -1,483 +1,270 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Control de Asistencia Escolar</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- HTML5 QRCode -->
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <!-- FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
-        .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
-        /* Animación para el escaneo NFC */
-        @keyframes pulse-ring {
-            0% { transform: scale(0.8); opacity: 0.5; }
-            100% { transform: scale(1.3); opacity: 0; }
-        }
-        .nfc-pulse::before {
-            content: ''; position: absolute; left: 0; top: 0; width: 100%; height: 100%;
-            background-color: #3b82f6; border-radius: 50%; z-index: -1;
-            animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Escáner de Asistencia</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background-color: #f3f4f6; }
+    .hidden { display: none !important; }
+  </style>
 </head>
-<body class="text-gray-800 antialiased h-screen flex flex-col overflow-hidden select-none">
+<body class="p-4 font-sans text-gray-800">
 
-    <!-- Header -->
-    <header class="bg-blue-800 text-white p-4 shadow-md flex justify-between items-center shrink-0">
-        <h1 class="text-xl font-bold"><i class="fa-solid fa-school mr-2"></i>Asistencia</h1>
-        <div class="flex items-center gap-3">
-            <span id="queue-badge" class="bg-red-500 text-xs font-bold px-2 py-1 rounded-full hidden">
-                <i class="fa-solid fa-cloud-arrow-up mr-1"></i><span id="queue-count">0</span>
-            </span>
-            <div id="network-status" class="flex items-center text-sm font-semibold">
-                <i class="fa-solid fa-circle text-green-400 mr-1 text-[10px]"></i> Online
-            </div>
-            <button id="btn-logout" class="hidden text-blue-200 hover:text-white" onclick="cerrarSesion()">
-                <i class="fa-solid fa-sign-out-alt"></i>
-            </button>
-        </div>
-    </header>
+  <div class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6 mt-4">
+    <h1 class="text-2xl font-bold text-center text-blue-600 mb-4">Control de Acceso</h1>
 
-    <!-- Modal Personalizado -->
-    <div id="custom-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden bg-black/50 transition-opacity">
-        <div class="bg-white rounded-xl shadow-2xl p-6 w-11/12 max-w-sm transform scale-95 transition-transform duration-200" id="modal-content">
-            <div class="text-center">
-                <div id="modal-icon" class="text-5xl mb-4"></div>
-                <h3 id="modal-title" class="text-xl font-bold mb-2"></h3>
-                <p id="modal-message" class="text-gray-600 mb-6"></p>
-                <button onclick="cerrarModal()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 active:scale-95 transition-all">
-                    Entendido
-                </button>
-            </div>
-        </div>
+    <!-- PANTALLA LOGIN -->
+    <div id="pantallaLogin">
+      <label class="block text-sm font-medium text-gray-700">Nombre del Prefecto/Maestro:</label>
+      <input type="text" id="nombrePrefecto" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2 focus:border-blue-500 focus:ring-blue-500" placeholder="Ej. Prof. Roberto">
+      <button onclick="iniciarSesion()" class="mt-4 w-full bg-blue-600 text-white py-2 rounded-lg font-bold">Iniciar Turno</button>
+      <p id="cargandoAlumnos" class="text-sm text-center text-blue-600 mt-2 hidden font-bold">Descargando base de datos, espera...</p>
     </div>
 
-    <!-- Main Content Area -->
-    <main class="flex-1 overflow-y-auto relative w-full h-full p-4 flex flex-col">
+    <!-- PANTALLA PRINCIPAL -->
+    <div id="pantallaEscaneo" class="hidden">
+      <p class="text-center text-sm font-semibold mb-4 bg-green-100 text-green-800 p-2 rounded" id="infoUsuario"></p>
+
+      <!-- BOTONES NFC Y QR -->
+      <div class="grid grid-cols-2 gap-4 mb-6">
+        <button onclick="iniciarNFC()" class="bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-xl font-bold flex flex-col items-center shadow-lg">
+          <span class="text-3xl mb-1">📡</span> Escanear NFC
+        </button>
+        <button onclick="alert('Función de cámara QR en desarrollo.')" class="bg-gray-800 hover:bg-gray-900 text-white py-4 rounded-xl font-bold flex flex-col items-center shadow-lg">
+          <span class="text-3xl mb-1">📷</span> Escanear QR
+        </button>
+      </div>
+
+      <div id="estadoNFC" class="text-center text-sm font-bold h-6 mb-4 text-gray-600"></div>
+
+      <!-- BOTÓN PARA ABRIR MENÚ MANUAL -->
+      <button onclick="toggleManual()" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 py-3 rounded-lg font-bold shadow mb-4 flex justify-center items-center">
+        <span>📝 Abrir Menú Manual / Justificantes</span>
+      </button>
+
+      <!-- SECCIÓN REGISTRO MANUAL (Oculta por defecto) -->
+      <div id="seccionManual" class="hidden border-t pt-4 border-gray-200 bg-gray-50 p-4 rounded-lg">
+        <h3 class="text-md font-bold text-gray-700 mb-3 text-center">Registro Manual</h3>
         
-        <!-- Vista: Login -->
-        <div id="view-login" class="flex-1 flex flex-col items-center justify-center w-full max-w-md mx-auto">
-            <div class="glass-panel p-8 rounded-2xl shadow-lg w-full text-center">
-                <i class="fa-solid fa-user-shield text-blue-600 text-6xl mb-4"></i>
-                <h2 class="text-2xl font-bold mb-6">Acceso Prefectura</h2>
-                <input type="text" id="input-prefecto" placeholder="Nombre del Prefecto/Maestro" 
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-6 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <button onclick="iniciarSesion()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition shadow-md active:scale-95">
-                    Ingresar al Sistema
-                </button>
-            </div>
+        <!-- Filtros -->
+        <div class="grid grid-cols-3 gap-2 mb-3">
+          <select id="filtroTurno" onchange="filtrarAlumnos()" class="border p-2 rounded text-sm bg-white"><option value="MATUTINO">Matutino</option><option value="VESPERTINO">Vespertino</option></select>
+          <select id="filtroGrado" onchange="filtrarAlumnos()" class="border p-2 rounded text-sm bg-white"><option value="1">1º</option><option value="2">2º</option><option value="3">3º</option></select>
+          <select id="filtroGrupo" onchange="filtrarAlumnos()" class="border p-2 rounded text-sm bg-white"><option value="A">A</option><option value="B">B</option><option value="C">C</option></select>
         </div>
 
-        <!-- Vista: Dashboard -->
-        <div id="view-dashboard" class="hidden flex-1 flex-col w-full max-w-md mx-auto">
-            <div class="mb-6 mt-2">
-                <h2 class="text-xl font-bold">Hola, <span id="nombre-usuario-display" class="text-blue-700"></span></h2>
-                <p class="text-sm text-gray-500">Selecciona un método de registro</p>
-            </div>
+        <label class="block text-xs font-bold text-gray-600 mb-1">Seleccionar Alumno:</label>
+        <select id="selectAlumno" class="w-full border border-blue-400 p-2 rounded mb-3 bg-white shadow-sm">
+          <option value="">-- Primero elige Turno, Grado y Grupo --</option>
+        </select>
 
-            <!-- NFC Section -->
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center mb-4 relative overflow-hidden">
-                <div id="nfc-ring" class="relative rounded-full bg-blue-100 p-6 mb-4 transition-all">
-                    <i class="fa-brands fa-nfc-symbol text-blue-600 text-5xl"></i>
-                </div>
-                <h3 class="font-bold text-lg">Modo Escáner NFC</h3>
-                <p class="text-gray-500 text-sm text-center mt-2 mb-4" id="nfc-status">Toca el botón para activar el lector y acerca la credencial del alumno.</p>
-                <button onclick="iniciarNFC()" id="btn-nfc" class="bg-blue-600 text-white px-8 py-3 rounded-full font-bold shadow-md hover:bg-blue-700 active:scale-95 transition">
-                    Activar NFC
-                </button>
-            </div>
+        <label class="block text-xs font-bold text-gray-600 mb-1">Tipo de Registro:</label>
+        <select id="selectAccion" class="w-full border p-2 rounded mb-3 text-blue-800 font-bold bg-blue-100">
+          <option value="MANUAL">✅ Asistencia Manual (Olvidó Tarjeta)</option>
+          <option value="JUSTIFICADA">⚠️ Falta Justificada (Enfermedad/Aviso)</option>
+        </select>
 
-            <div class="grid grid-cols-2 gap-4 mb-4">
-                <!-- Botón QR -->
-                <button onclick="mostrarQR()" class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center hover:bg-gray-50 active:scale-95 transition">
-                    <i class="fa-solid fa-qrcode text-3xl text-gray-700 mb-2"></i>
-                    <span class="font-semibold text-sm">Escanear QR</span>
-                </button>
-                <!-- Botón Manual -->
-                <button onclick="mostrarManual()" class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center hover:bg-gray-50 active:scale-95 transition">
-                    <i class="fa-solid fa-keyboard text-3xl text-gray-700 mb-2"></i>
-                    <span class="font-semibold text-sm">Entrada Manual</span>
-                </button>
-            </div>
+        <label class="block text-xs font-bold text-gray-600 mb-1">Motivo / Notas (Opcional):</label>
+        <input type="text" id="inputObservaciones" class="w-full border p-2 rounded mb-4" placeholder="Ej. Cita médica, Problema familiar...">
+        
+        <button onclick="registrarManual()" class="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-lg font-bold shadow-lg text-lg">
+          💾 Guardar Registro
+        </button>
+      </div>
 
-            <!-- Lista de escaneos recientes locales -->
-            <div class="mt-4 flex-1">
-                <h3 class="font-bold text-gray-700 mb-2 text-sm">Últimos Escaneos Locales</h3>
-                <ul id="lista-recientes" class="space-y-2 text-sm">
-                    <!-- Dinámico -->
-                </ul>
-            </div>
-        </div>
+      <!-- COLA OFFLINE -->
+      <div id="offlineBanner" class="hidden mt-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-2 text-xs text-center rounded">
+        Estás sin conexión. Registros pendientes: <span id="colaCount" class="font-bold text-red-600">0</span>
+      </div>
+    </div>
+  </div>
 
-        <!-- Vista: Escáner QR -->
-        <div id="view-qr" class="hidden flex-1 flex-col w-full max-w-md mx-auto">
-            <div class="flex items-center mb-4 mt-2">
-                <button onclick="volverDashboard()" class="text-gray-600 mr-3 text-xl"><i class="fa-solid fa-arrow-left"></i></button>
-                <h2 class="text-xl font-bold">Lector QR</h2>
-            </div>
-            <div class="bg-black rounded-xl overflow-hidden w-full aspect-square relative shadow-inner mb-4 flex items-center justify-center">
-                <div id="qr-reader" class="w-full h-full"></div>
-            </div>
-            <button onclick="volverDashboard()" class="w-full bg-gray-200 text-gray-800 font-bold py-3 rounded-lg hover:bg-gray-300 active:scale-95">
-                Cancelar
-            </button>
-        </div>
+  <script>
+    // ⚠️ REEMPLAZA CON TU NUEVA URL DEL SCRIPT (Asegúrate de haber creado una NUEVA VERSIÓN)
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/TU_SCRIPT_ID/exec"; 
+    
+    let usuarioActivo = "";
+    let baseAlumnos = []; 
+    let colaOffline = JSON.parse(localStorage.getItem('colaAsistencia')) || [];
+    let ultimosEscaneos = {}; 
 
-        <!-- Vista: Entrada Manual -->
-        <div id="view-manual" class="hidden flex-1 flex-col w-full max-w-md mx-auto">
-            <div class="flex items-center mb-6 mt-2">
-                <button onclick="volverDashboard()" class="text-gray-600 mr-3 text-xl"><i class="fa-solid fa-arrow-left"></i></button>
-                <h2 class="text-xl font-bold">Registro Manual</h2>
-            </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <label class="block text-gray-700 font-bold mb-2 text-sm">ID del Alumno o Matrícula</label>
-                <input type="text" id="input-manual-id" placeholder="Ej. 2627-PEGAJU-0001" 
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-6 focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase">
-                <button onclick="registrarManual()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg shadow-md hover:bg-blue-700 active:scale-95 transition">
-                    Registrar Asistencia
-                </button>
-            </div>
-        </div>
+    async function iniciarSesion() {
+      usuarioActivo = document.getElementById("nombrePrefecto").value.trim();
+      if(!usuarioActivo) return alert("Ingresa tu nombre");
+      
+      const btnLoading = document.getElementById("cargandoAlumnos");
+      btnLoading.classList.remove("hidden");
+      
+      try {
+        const res = await fetch(APPS_SCRIPT_URL + "?action=getAlumnos");
+        const textoRespuesta = await res.text(); // Leemos como texto primero para evitar errores silenciosos
+        
+        try {
+          baseAlumnos = JSON.parse(textoRespuesta);
+          localStorage.setItem("alumnosCache", JSON.stringify(baseAlumnos));
+        } catch (jsonErr) {
+          console.error("El servidor no devolvió un JSON:", textoRespuesta);
+          alert("Error: Google Sheets no devolvió los alumnos. Verifica que hayas publicado una NUEVA VERSIÓN del script.");
+          throw new Error("Respuesta inválida");
+        }
+      } catch (err) {
+        baseAlumnos = JSON.parse(localStorage.getItem("alumnosCache") || "[]");
+        if(baseAlumnos.length === 0) {
+          alert("Sin conexión y sin caché. La lista manual estará vacía.");
+        } else {
+          alert("Trabajando en modo offline. Se cargó la lista de alumnos guardada previamente.");
+        }
+      }
 
-    </main>
+      document.getElementById("pantallaLogin").classList.add("hidden");
+      document.getElementById("pantallaEscaneo").classList.remove("hidden");
+      document.getElementById("infoUsuario").innerText = "Activo: " + usuarioActivo;
+      
+      filtrarAlumnos(); 
+      actualizarUIOffline();
+    }
 
-    <script>
-        // CONFIGURACIÓN (Reemplaza con la URL de tu Google Apps Script generada)
-        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwpbh1Isnul9HjLJ3xbHa05gM2eFFYP9pDK_L0_yjiEknYlqJUbDNhLokcw9zDGiEVM/exec"; 
-        const BLOQUEO_TIEMPO_MS = 10 * 60 * 1000; // 10 Minutos
+    function toggleManual() {
+      const seccion = document.getElementById("seccionManual");
+      if(seccion.classList.contains("hidden")) {
+        seccion.classList.remove("hidden");
+        // Hacemos scroll hacia abajo suavemente para que el usuario lo vea
+        seccion.scrollIntoView({ behavior: 'smooth' });
+      } else {
+        seccion.classList.add("hidden");
+      }
+    }
 
-        // Variables de Estado
-        let usuarioActual = "";
-        let isOnline = navigator.onLine;
-        let qrScanner = null;
-        let registroEscaneos = {}; // Para prevenir doble escaneo { "ID": timestamp }
-        let colaOffline = JSON.parse(localStorage.getItem('asistenciaCola')) || [];
+    function filtrarAlumnos() {
+      const turno = document.getElementById("filtroTurno").value;
+      const grado = document.getElementById("filtroGrado").value;
+      const grupo = document.getElementById("filtroGrupo").value;
+      
+      const select = document.getElementById("selectAlumno");
+      select.innerHTML = '<option value="">-- Selecciona un alumno --</option>';
+      
+      const filtrados = baseAlumnos.filter(a => a.turno === turno && a.grado === grado && a.grupo === grupo);
+      
+      if(filtrados.length === 0) {
+        select.innerHTML = '<option value="">No hay alumnos en este grupo</option>';
+        return;
+      }
 
-        // Inicialización
-        window.addEventListener('load', () => {
-            actualizarEstadoRed();
-            actualizarUICola();
-            
-            // Comprobar sesión guardada
-            const guardado = localStorage.getItem('prefecto_nombre');
-            if (guardado) {
-                document.getElementById('input-prefecto').value = guardado;
-                iniciarSesion();
-            }
+      // Ordenar alfabéticamente
+      filtrados.sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+      filtrados.forEach(a => {
+        let opt = document.createElement("option");
+        opt.value = a.id;
+        opt.text = a.nombre;
+        select.appendChild(opt);
+      });
+    }
+
+    // (El resto de las funciones NFC y procesarEscaneo se mantienen igual)
+    async function iniciarNFC() {
+      if (!("NDEFReader" in window)) return alert("NFC no soportado en este dispositivo (Usa Chrome en Android).");
+      const estado = document.getElementById("estadoNFC");
+      try {
+        const ndef = new NDEFReader();
+        await ndef.scan();
+        estado.innerText = "Acerca la tarjeta al teléfono...";
+        estado.className = "text-center text-sm font-bold h-6 mb-4 text-blue-600 animate-pulse";
+        
+        ndef.addEventListener("reading", ({ message }) => {
+          for (const record of message.records) {
+            const textDecoder = new TextDecoder(record.encoding);
+            const idNfc = textDecoder.decode(record.data);
+            procesarEscaneo(idNfc, "ESCANEO_NFC", "");
+          }
         });
+      } catch (error) {
+        estado.innerText = "Error NFC: " + error;
+      }
+    }
 
-        // Manejo de Conexión
-        window.addEventListener('online',  () => { isOnline = true; actualizarEstadoRed(); procesarColaOffline(); });
-        window.addEventListener('offline', () => { isOnline = false; actualizarEstadoRed(); });
+    function registrarManual() {
+      const idNfc = document.getElementById("selectAlumno").value;
+      const accion = document.getElementById("selectAccion").value;
+      const obs = document.getElementById("inputObservaciones").value;
+      
+      if(!idNfc) return alert("Por favor selecciona un alumno.");
+      
+      procesarEscaneo(idNfc, accion, obs);
+      
+      document.getElementById("selectAlumno").value = "";
+      document.getElementById("inputObservaciones").value = "";
+      toggleManual(); // Ocultar menú tras registrar
+    }
 
-        function actualizarEstadoRed() {
-            const statusDiv = document.getElementById('network-status');
-            if (isOnline) {
-                statusDiv.innerHTML = '<i class="fa-solid fa-circle text-green-400 mr-1 text-[10px]"></i> Online';
-                statusDiv.classList.remove('text-red-300');
-            } else {
-                statusDiv.innerHTML = '<i class="fa-solid fa-circle-exclamation text-red-500 mr-1 text-[10px]"></i> Offline';
-                statusDiv.classList.add('text-red-300');
-            }
-        }
+    function procesarEscaneo(idNfc, accion, observaciones) {
+      const ahora = Date.now();
+      if (ultimosEscaneos[idNfc] && (ahora - ultimosEscaneos[idNfc] < 600000)) {
+        if ("vibrate" in navigator) navigator.vibrate([100, 50, 100]);
+        alert("⚠️ TARJETA YA REGISTRADA HACE MENOS DE 10 MINUTOS.");
+        return;
+      }
+      
+      ultimosEscaneos[idNfc] = ahora;
+      if ("vibrate" in navigator) navigator.vibrate(200);
 
-        // Custom Modal
-        function mostrarModal(titulo, mensaje, tipo = "info") {
-            const modal = document.getElementById('custom-modal');
-            const icon = document.getElementById('modal-icon');
-            document.getElementById('modal-title').innerText = titulo;
-            document.getElementById('modal-message').innerText = mensaje;
-            
-            if (tipo === "success") { icon.innerHTML = '<i class="fa-solid fa-circle-check text-green-500"></i>'; }
-            else if (tipo === "error") { icon.innerHTML = '<i class="fa-solid fa-circle-xmark text-red-500"></i>'; }
-            else if (tipo === "warning") { icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-yellow-500"></i>'; }
-            else { icon.innerHTML = '<i class="fa-solid fa-circle-info text-blue-500"></i>'; }
-            
-            modal.classList.remove('hidden');
-        }
+      const payload = { accion, idNfc, registradoPor: usuarioActivo, observaciones };
 
-        function cerrarModal() {
-            document.getElementById('custom-modal').classList.add('hidden');
-        }
+      if (navigator.onLine) {
+        enviarAGoogle(payload);
+      } else {
+        colaOffline.push(payload);
+        localStorage.setItem('colaAsistencia', JSON.stringify(colaOffline));
+        actualizarUIOffline();
+        alert("Sin internet. Guardado localmente.");
+      }
+    }
 
-        // Navegación y Login
-        function cambiarVista(idVista) {
-            ['view-login', 'view-dashboard', 'view-qr', 'view-manual'].forEach(id => {
-                document.getElementById(id).classList.add('hidden');
-            });
-            document.getElementById(idVista).classList.remove('hidden');
-        }
+    function enviarAGoogle(payload) {
+      document.getElementById("estadoNFC").innerText = "Enviando...";
+      fetch(APPS_SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("estadoNFC").innerText = "¡Listo!";
+        alert(data.message);
+      })
+      .catch(err => {
+        colaOffline.push(payload);
+        localStorage.setItem('colaAsistencia', JSON.stringify(colaOffline));
+        actualizarUIOffline();
+      });
+    }
 
-        function iniciarSesion() {
-            const nombre = document.getElementById('input-prefecto').value.trim();
-            if (!nombre) {
-                mostrarModal("Atención", "Por favor ingresa tu nombre.", "warning");
-                return;
-            }
-            usuarioActual = nombre;
-            localStorage.setItem('prefecto_nombre', nombre);
-            document.getElementById('nombre-usuario-display').innerText = nombre;
-            document.getElementById('btn-logout').classList.remove('hidden');
-            cambiarVista('view-dashboard');
-        }
+    window.addEventListener('online', () => {
+      if(colaOffline.length > 0) {
+        const tempCola = [...colaOffline];
+        colaOffline = [];
+        localStorage.removeItem('colaAsistencia');
+        actualizarUIOffline();
+        
+        tempCola.forEach(payload => {
+          fetch(APPS_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
+        });
+        alert("Conexión restaurada. Sincronizando registros atrasados.");
+      }
+    });
 
-        function cerrarSesion() {
-            localStorage.removeItem('prefecto_nombre');
-            usuarioActual = "";
-            document.getElementById('btn-logout').classList.add('hidden');
-            document.getElementById('input-prefecto').value = "";
-            if(qrScanner) qrScanner.stop().catch(e=>console.log(e));
-            cambiarVista('view-login');
-        }
+    window.addEventListener('offline', actualizarUIOffline);
 
-        function volverDashboard() {
-            if(qrScanner) {
-                qrScanner.stop().catch(e=>console.log(e));
-                qrScanner = null;
-            }
-            cambiarVista('view-dashboard');
-        }
-
-        function mostrarQR() { cambiarVista('view-qr'); iniciarEscaneoQR(); }
-        function mostrarManual() { 
-            cambiarVista('view-manual'); 
-            document.getElementById('input-manual-id').value = "";
-            setTimeout(() => document.getElementById('input-manual-id').focus(), 100);
-        }
-
-        // Lógica de Prevención de Doble Escaneo
-        function comprobarDobleEscaneo(id) {
-            const ahora = Date.now();
-            if (registroEscaneos[id]) {
-                const diferencia = ahora - registroEscaneos[id];
-                if (diferencia < BLOQUEO_TIEMPO_MS) {
-                    const minRestantes = Math.ceil((BLOQUEO_TIEMPO_MS - diferencia) / 60000);
-                    mostrarModal("Escaneo Bloqueado", `El ID ${id} ya fue registrado. Espera ${minRestantes} minuto(s) para volver a escanear.`, "warning");
-                    return false;
-                }
-            }
-            registroEscaneos[id] = ahora; // Actualizar registro
-            return true;
-        }
-
-        // Función central para registrar la asistencia
-        function procesarAsistencia(idAlumno, modo) {
-            if(!idAlumno) return;
-            idAlumno = idAlumno.toUpperCase().trim();
-            
-            if (!comprobarDobleEscaneo(idAlumno)) return;
-
-            const payload = {
-                idNfc: idAlumno,
-                registradoPor: usuarioActual,
-                modo: modo,
-                timestamp: new Date().toISOString()
-            };
-
-            agregarAListaUI(idAlumno, modo);
-            volverDashboard();
-
-            if (isOnline) {
-                enviarABackend(payload);
-            } else {
-                guardarEnColaOffline(payload);
-            }
-        }
-
-        // Web NFC API
-        async function iniciarNFC() {
-            const btn = document.getElementById('btn-nfc');
-            const ring = document.getElementById('nfc-ring');
-            const status = document.getElementById('nfc-status');
-
-            if (!("NDEFReader" in window)) {
-                mostrarModal("NFC no soportado", "Tu navegador o dispositivo no soporta Web NFC. Usa Chrome en Android o la opción de QR/Manual.", "error");
-                return;
-            }
-
-            try {
-                const ndef = new NDEFReader();
-                await ndef.scan();
-                
-                ring.classList.add('nfc-pulse');
-                btn.innerText = "Escaneando...";
-                btn.classList.replace('bg-blue-600', 'bg-green-500');
-                status.innerText = "Acerca la tarjeta a la parte trasera del dispositivo...";
-                
-                ndef.addEventListener("reading", ({ message, serialNumber }) => {
-                    // Si tienes el ID codificado en texto dentro de la etiqueta:
-                    try {
-                        let idLeido = "";
-                        for (const record of message.records) {
-                            if (record.recordType === "text") {
-                                const textDecoder = new TextDecoder(record.encoding);
-                                idLeido = textDecoder.decode(record.data);
-                                break;
-                            }
-                        }
-                        // Si la etiqueta está vacía de texto, usar el serial number de hardware como fallback
-                        if(!idLeido) idLeido = serialNumber;
-                        
-                        // Vibración de éxito
-                        if(navigator.vibrate) navigator.vibrate(200);
-                        
-                        procesarAsistencia(idLeido, "NFC");
-                        
-                        // Reset UI
-                        ring.classList.remove('nfc-pulse');
-                        btn.innerText = "Activar NFC";
-                        btn.classList.replace('bg-green-500', 'bg-blue-600');
-                        status.innerText = "Escaneo completado. Toca para leer otro.";
-
-                    } catch (error) {
-                        mostrarModal("Error de lectura", "No se pudo descifrar la etiqueta.", "error");
-                    }
-                });
-
-            } catch (error) {
-                mostrarModal("Error NFC", "Permiso denegado o error de hardware: " + error, "error");
-            }
-        }
-
-        // Escáner QR (usando html5-qrcode)
-        function iniciarEscaneoQR() {
-            if (qrScanner) { qrScanner.clear(); }
-            
-            qrScanner = new Html5Qrcode("qr-reader");
-            const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
-            
-            qrScanner.start({ facingMode: "environment" }, config, 
-                (decodedText, decodedResult) => {
-                    if(navigator.vibrate) navigator.vibrate(200);
-                    procesarAsistencia(decodedText, "QR");
-                    qrScanner.stop();
-                },
-                (errorMessage) => { /* ignorar errores de escaneo continuo */ }
-            ).catch((err) => {
-                mostrarModal("Error de Cámara", "No se pudo iniciar la cámara: " + err, "error");
-            });
-        }
-
-        // Registro Manual
-        function registrarManual() {
-            const input = document.getElementById('input-manual-id').value;
-            if (input.length < 3) {
-                mostrarModal("Error", "Ingresa un ID válido", "warning");
-                return;
-            }
-            procesarAsistencia(input, "MANUAL");
-        }
-
-        // Gestión Offline
-        function guardarEnColaOffline(payload) {
-            colaOffline.push(payload);
-            localStorage.setItem('asistenciaCola', JSON.stringify(colaOffline));
-            actualizarUICola();
-            mostrarModal("Guardado Local", `Sin conexión. Registro de ${payload.idNfc} guardado en el dispositivo. Se sincronizará al volver la red.`, "info");
-        }
-
-        function actualizarUICola() {
-            const badge = document.getElementById('queue-badge');
-            const count = document.getElementById('queue-count');
-            if (colaOffline.length > 0) {
-                count.innerText = colaOffline.length;
-                badge.classList.remove('hidden');
-            } else {
-                badge.classList.add('hidden');
-            }
-        }
-
-        async function procesarColaOffline() {
-            if (colaOffline.length === 0 || !isOnline) return;
-            
-            mostrarModal("Sincronizando", `Subiendo ${colaOffline.length} registros pendientes...`, "info");
-            
-            // Copiar cola y vaciar local para evitar duplicados en la carrera
-            const registrosProcesar = [...colaOffline];
-            colaOffline = [];
-            localStorage.setItem('asistenciaCola', JSON.stringify(colaOffline));
-            actualizarUICola();
-
-            let errores = [];
-
-            for (const payload of registrosProcesar) {
-                try {
-                    await enviarABackend(payload, true);
-                } catch (e) {
-                    errores.push(payload); // Si falla, volver a meterlo
-                }
-            }
-
-            if (errores.length > 0) {
-                colaOffline = [...colaOffline, ...errores];
-                localStorage.setItem('asistenciaCola', JSON.stringify(colaOffline));
-                actualizarUICola();
-                mostrarModal("Aviso", `No se pudieron subir ${errores.length} registros. Se reintentará luego.`, "warning");
-            } else {
-                mostrarModal("Éxito", "Sincronización completada correctamente.", "success");
-            }
-        }
-
-        // Llamada API al servidor
-        async function enviarABackend(payload, silente = false) {
-            // Nota: Al usar APPS_SCRIPT_URL vacía/falsa por ahora para el render, capturamos error.
-            if(APPS_SCRIPT_URL === "https://script.google.com/macros/s/TU_SCRIPT_ID/exec" && !silente) {
-               mostrarModal("Simulación Completada", "El registro se procesó. (Reemplaza APPS_SCRIPT_URL en el código para conectar con Google Sheets).", "success");
-               return Promise.resolve();
-            }
-
-            try {
-                const response = await fetch(APPS_SCRIPT_URL, {
-                    method: 'POST',
-                    body: JSON.stringify(payload),
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' } // Apps Script maneja mejor text/plain en CORS
-                });
-                
-                const result = await response.json();
-                
-                if (!silente) {
-                    if (result.status === "SUCCESS") {
-                        mostrarModal("Registrado", result.message, "success");
-                    } else {
-                        mostrarModal("Aviso del Servidor", result.message, "warning");
-                    }
-                }
-                return result;
-            } catch (error) {
-                if (!silente) {
-                    mostrarModal("Error de Conexión", "No se pudo conectar con el servidor. Guardando en modo offline.", "error");
-                    guardarEnColaOffline(payload);
-                }
-                throw error;
-            }
-        }
-
-        // UI Helpers
-        function agregarAListaUI(id, modo) {
-            const ul = document.getElementById('lista-recientes');
-            const li = document.createElement('li');
-            const icon = modo === 'NFC' ? 'fa-nfc-symbol text-blue-500' : (modo === 'QR' ? 'fa-qrcode text-gray-700' : 'fa-keyboard text-green-500');
-            const hora = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            
-            li.className = "bg-white p-3 rounded-lg border border-gray-100 shadow-sm flex items-center justify-between";
-            li.innerHTML = `
-                <div class="flex items-center">
-                    <i class="fa-brands ${icon} w-6 text-center"></i>
-                    <span class="font-mono ml-2 text-gray-800">${id}</span>
-                </div>
-                <span class="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded">${hora}</span>
-            `;
-            ul.prepend(li);
-            
-            // Mantener solo los últimos 5
-            if(ul.children.length > 5) ul.removeChild(ul.lastChild);
-        }
-    </script>
+    function actualizarUIOffline() {
+      const banner = document.getElementById("offlineBanner");
+      if (!navigator.onLine || colaOffline.length > 0) {
+        banner.classList.remove("hidden");
+        document.getElementById("colaCount").innerText = colaOffline.length;
+      } else {
+        banner.classList.add("hidden");
+      }
+    }
+  </script>
 </body>
 </html>
