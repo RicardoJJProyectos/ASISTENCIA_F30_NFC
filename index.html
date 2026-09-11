@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Asistencia Escolar</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Librería para escáner QR -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
   <style> body { background-color: #f3f4f6; } </style>
 </head>
 <body class="p-4 font-sans text-gray-800">
@@ -16,47 +18,51 @@
     <div id="pantallaLogin">
       <label class="block text-sm font-bold text-gray-700">Nombre de quien registra:</label>
       <input type="text" id="nombrePrefecto" class="mt-2 block w-full rounded-md border-gray-400 shadow-sm border p-3 focus:border-blue-500 focus:ring-blue-500" placeholder="Ej. Prof. Roberto">
-      <button onclick="iniciarSesion()" class="mt-4 w-full bg-blue-600 text-white py-3 rounded-lg font-bold text-lg">Ingresar</button>
+      <button onclick="iniciarSesion()" class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold text-lg">Ingresar</button>
       
-      <!-- Mensajes de estado al cargar -->
       <p id="msjCargando" class="text-sm text-center text-blue-600 mt-4 font-bold hidden">Conectando con Google Sheets, espera...</p>
       <div id="msjError" class="mt-4 bg-red-100 text-red-700 p-3 rounded text-sm hidden font-bold"></div>
     </div>
 
-    <!-- PANTALLA PRINCIPAL (Oculta al inicio) -->
+    <!-- PANTALLA PRINCIPAL -->
     <div id="pantallaEscaneo" class="hidden">
       <p class="text-center text-sm font-bold mb-4 bg-green-100 text-green-800 p-2 rounded" id="infoUsuario"></p>
 
-      <!-- BOTÓN NFC -->
-      <button onclick="iniciarNFC()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-xl font-bold flex flex-col items-center shadow-lg mb-2">
-        <span class="text-3xl mb-1">📡</span> Iniciar Lector NFC
-      </button>
-      <div id="estadoNFC" class="text-center text-sm font-bold h-6 mb-6 text-gray-600"></div>
+      <!-- BOTONES MODERNOS NFC Y QR -->
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <button onclick="iniciarNFC()" class="bg-indigo-600 hover:bg-indigo-700 text-white py-5 rounded-xl font-bold flex flex-col items-center shadow-lg transition transform hover:scale-105">
+          <span class="text-4xl mb-2">📡</span> NFC
+        </button>
+        <button onclick="iniciarQR()" class="bg-gray-800 hover:bg-gray-900 text-white py-5 rounded-xl font-bold flex flex-col items-center shadow-lg transition transform hover:scale-105">
+          <span class="text-4xl mb-2">📷</span> QR
+        </button>
+      </div>
 
-      <!-- SECCIÓN REGISTRO MANUAL (SIEMPRE VISIBLE) -->
-      <div class="border-2 border-gray-200 bg-gray-50 p-4 rounded-lg">
+      <div id="estadoNFC" class="text-center text-sm font-bold h-6 mb-2 text-gray-600"></div>
+      
+      <!-- CONTENEDOR DE CÁMARA QR (Oculto por defecto) -->
+      <div id="qr-reader" class="w-full mb-4 hidden rounded-lg overflow-hidden border-2 border-gray-300"></div>
+
+      <!-- SECCIÓN REGISTRO MANUAL -->
+      <div class="border-2 border-gray-200 bg-gray-50 p-4 rounded-lg mt-4">
         <h3 class="text-lg font-bold text-gray-800 mb-3 border-b pb-2 text-center">📝 Registro Manual</h3>
         
-        <label class="block text-xs font-bold text-gray-500 mb-1">1. Filtra tu grupo:</label>
         <div class="grid grid-cols-3 gap-2 mb-4">
           <select id="filtroTurno" onchange="filtrarAlumnos()" class="border-2 border-gray-300 p-2 rounded font-bold text-sm bg-white"><option value="MATUTINO">Matutino</option><option value="VESPERTINO">Vespertino</option></select>
           <select id="filtroGrado" onchange="filtrarAlumnos()" class="border-2 border-gray-300 p-2 rounded font-bold text-sm bg-white"><option value="1">1º</option><option value="2">2º</option><option value="3">3º</option></select>
           <select id="filtroGrupo" onchange="filtrarAlumnos()" class="border-2 border-gray-300 p-2 rounded font-bold text-sm bg-white"><option value="A">A</option><option value="B">B</option><option value="C">C</option></select>
         </div>
 
-        <label class="block text-xs font-bold text-gray-500 mb-1">2. Selecciona al alumno:</label>
         <select id="selectAlumno" class="w-full border-2 border-blue-400 p-2 rounded mb-4 bg-white font-bold text-gray-700 shadow-sm">
           <option value="">-- Cursos cargando... --</option>
         </select>
 
-        <label class="block text-xs font-bold text-gray-500 mb-1">3. Tipo de asistencia:</label>
         <select id="selectAccion" class="w-full border-2 border-gray-300 p-2 rounded mb-4 font-bold bg-white">
           <option value="MANUAL">✅ Asistencia (Olvidó Tarjeta)</option>
           <option value="JUSTIFICADA">⚠️ Falta Justificada (Aviso)</option>
         </select>
 
-        <label class="block text-xs font-bold text-gray-500 mb-1">4. Observaciones (opcional):</label>
-        <input type="text" id="inputObservaciones" class="w-full border-2 border-gray-300 p-2 rounded mb-4" placeholder="Ej. Cita médica...">
+        <input type="text" id="inputObservaciones" class="w-full border-2 border-gray-300 p-2 rounded mb-4" placeholder="Observaciones (Opcional)...">
         
         <button onclick="registrarManual()" class="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-lg font-bold shadow-md text-lg">
           💾 Guardar Registro
@@ -72,7 +78,7 @@
 
   <script>
     // =================================================================
-    // ⚠️ PEGA AQUÍ LA NUEVA URL QUE COPIASTE DE GOOGLE APPS SCRIPT ⚠️
+    // ⚠️ PEGA AQUÍ TU NUEVA URL DE GOOGLE APPS SCRIPT
     // =================================================================
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzRHFdi8pFT35MYcZr2-10sQCnFNYFmLmNtJ88S6-16Yoiuz04uhdZqr38vFvlyoPEl/exec"; 
     
@@ -80,6 +86,7 @@
     let baseAlumnos = []; 
     let colaOffline = JSON.parse(localStorage.getItem('colaAsistencia')) || [];
     let ultimosEscaneos = {}; 
+    let escanerQRActivo = null;
 
     async function iniciarSesion() {
       usuarioActivo = document.getElementById("nombrePrefecto").value.trim();
@@ -89,66 +96,51 @@
       document.getElementById("msjError").classList.add("hidden");
       
       try {
-        // Pedimos los datos a Google Sheets
-        const urlPeticion = APPS_SCRIPT_URL + "?action=getAlumnos";
-        const respuesta = await fetch(urlPeticion, { redirect: "follow" });
+        const respuesta = await fetch(APPS_SCRIPT_URL + "?action=getAlumnos", { redirect: "follow" });
         const textoData = await respuesta.text(); 
-        
         try {
           baseAlumnos = JSON.parse(textoData);
-          
-          if(baseAlumnos.length > 0 && baseAlumnos[0].error) {
-            throw new Error("El script devolvió un error: " + baseAlumnos[0].error);
-          }
-
+          if(baseAlumnos.length > 0 && baseAlumnos[0].error) throw new Error(baseAlumnos[0].error);
           localStorage.setItem("alumnosCache", JSON.stringify(baseAlumnos));
         } catch (e) {
-          throw new Error("Respuesta no válida del servidor. ¿Pegaste la URL correcta? Respuesta: " + textoData.substring(0, 50));
+          throw new Error("Respuesta no válida del servidor.");
         }
       } catch (err) {
-        // Si no hay internet o falló el enlace, cargamos desde el caché local del celular
         baseAlumnos = JSON.parse(localStorage.getItem("alumnosCache") || "[]");
         if(baseAlumnos.length === 0) {
           document.getElementById("msjCargando").classList.add("hidden");
           const cajaError = document.getElementById("msjError");
-          cajaError.innerText = "Error crítico: " + err.message;
+          cajaError.innerText = "Error: Verifica la URL del script.";
           cajaError.classList.remove("hidden");
-          return; // Detiene el inicio de sesión
+          return; 
         } else {
-          alert("Sin conexión. Trabajando en modo OFFLINE con " + baseAlumnos.length + " alumnos guardados previamente.");
+          alert("Trabajando OFFLINE con datos guardados.");
         }
       }
 
-      // Si llegamos aquí, el inicio de sesión fue un éxito
       document.getElementById("pantallaLogin").classList.add("hidden");
       document.getElementById("pantallaEscaneo").classList.remove("hidden");
-      document.getElementById("infoUsuario").innerText = "👤 Usuario Activo: " + usuarioActivo;
+      document.getElementById("infoUsuario").innerText = "👤 Activo: " + usuarioActivo;
       
-      filtrarAlumnos(); // Carga la lista inicial del Grupo 1ºA Matutino
+      filtrarAlumnos(); 
       actualizarUIOffline();
     }
 
-    // Filtra el select en base a los botones
     function filtrarAlumnos() {
       const turno = document.getElementById("filtroTurno").value;
       const grado = document.getElementById("filtroGrado").value;
       const grupo = document.getElementById("filtroGrupo").value;
       const select = document.getElementById("selectAlumno");
       
-      select.innerHTML = ''; // Limpiamos lista
-      
+      select.innerHTML = ''; 
       const filtrados = baseAlumnos.filter(a => a.turno === turno && a.grado === grado && a.grupo === grupo);
       
       if(filtrados.length === 0) {
-        select.innerHTML = '<option value="">❌ No hay alumnos registrados en este grupo</option>';
+        select.innerHTML = '<option value="">❌ No hay alumnos</option>';
         return;
       }
-
-      select.innerHTML = '<option value="">-- Toca aquí para elegir alumno --</option>';
-      
-      // Ordenamos por nombre
+      select.innerHTML = '<option value="">-- Elige un alumno --</option>';
       filtrados.sort((a, b) => a.nombre.localeCompare(b.nombre));
-
       filtrados.forEach(a => {
         let opt = document.createElement("option");
         opt.value = a.id;
@@ -157,27 +149,55 @@
       });
     }
 
-    // Funciones NFC
+    // NFC LÓGICA
     async function iniciarNFC() {
-      if (!("NDEFReader" in window)) return alert("Tu dispositivo o navegador no soporta lectura NFC (Usa Chrome en Android).");
+      if(escanerQRActivo) detenerQR();
+      if (!("NDEFReader" in window)) return alert("NFC no soportado. Usa Chrome en Android.");
       const estado = document.getElementById("estadoNFC");
       try {
         const ndef = new NDEFReader();
         await ndef.scan();
-        estado.innerText = "Acerca la tarjeta al reverso del celular...";
-        estado.className = "text-center text-sm font-bold h-6 mb-6 text-blue-600 animate-pulse";
+        estado.innerText = "Acerca la tarjeta al celular...";
+        estado.className = "text-center text-sm font-bold h-6 mb-2 text-indigo-600 animate-pulse";
         
         ndef.addEventListener("reading", ({ message }) => {
           for (const record of message.records) {
             const textDecoder = new TextDecoder(record.encoding);
             const idNfc = textDecoder.decode(record.data);
             procesarEscaneo(idNfc, "ESCANEO_NFC", "");
+            estado.innerText = "¡Tarjeta leída!";
+            estado.className = "text-center text-sm font-bold h-6 mb-2 text-green-600";
           }
         });
       } catch (error) {
-        estado.innerText = "Error de Lector NFC.";
-        alert("Error al iniciar NFC: Verifica que el NFC esté encendido en tu celular.");
+        estado.innerText = "Error NFC.";
       }
+    }
+
+    // QR LÓGICA
+    function iniciarQR() {
+      const qrContainer = document.getElementById("qr-reader");
+      if (!qrContainer.classList.contains("hidden")) {
+        detenerQR();
+        return;
+      }
+      qrContainer.classList.remove("hidden");
+      document.getElementById("estadoNFC").innerText = "Apunta al código QR...";
+      
+      escanerQRActivo = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: 250 });
+      escanerQRActivo.render((decodedText) => {
+        procesarEscaneo(decodedText, "ESCANEO_QR", "");
+        detenerQR();
+      }, (error) => {});
+    }
+
+    function detenerQR() {
+      if(escanerQRActivo) {
+        escanerQRActivo.clear();
+        escanerQRActivo = null;
+      }
+      document.getElementById("qr-reader").classList.add("hidden");
+      document.getElementById("estadoNFC").innerText = "";
     }
 
     function registrarManual() {
@@ -185,8 +205,7 @@
       const accion = document.getElementById("selectAccion").value;
       const obs = document.getElementById("inputObservaciones").value;
       
-      if(!idNfc) return alert("❌ Por favor selecciona a un alumno de la lista antes de guardar.");
-      
+      if(!idNfc) return alert("❌ Selecciona a un alumno.");
       procesarEscaneo(idNfc, accion, obs);
       
       document.getElementById("selectAlumno").value = "";
@@ -197,7 +216,7 @@
       const ahora = Date.now();
       if (ultimosEscaneos[idNfc] && (ahora - ultimosEscaneos[idNfc] < 600000)) {
         if ("vibrate" in navigator) navigator.vibrate([100, 50, 100]);
-        alert("⚠️ TARJETA YA REGISTRADA HACE MENOS DE 10 MINUTOS.");
+        alert("⚠️ REGISTRO DUPLICADO (Espera 10 min).");
         return;
       }
       
@@ -206,28 +225,19 @@
 
       const payload = { accion, idNfc, registradoPor: usuarioActivo, observaciones };
 
-      if (navigator.onLine) {
-        enviarAGoogle(payload);
-      } else {
+      if (navigator.onLine) enviarAGoogle(payload);
+      else {
         colaOffline.push(payload);
         localStorage.setItem('colaAsistencia', JSON.stringify(colaOffline));
         actualizarUIOffline();
-        alert("💾 Sin internet: Registro guardado en el celular. Se subirá automáticamente al recuperar señal.");
+        alert("💾 Sin red: Guardado en el celular.");
       }
     }
 
     function enviarAGoogle(payload) {
-      document.getElementById("estadoNFC").innerText = "Enviando registro...";
-      fetch(APPS_SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify(payload),
-        redirect: "follow"
-      })
+      fetch(APPS_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload), redirect: "follow" })
       .then(res => res.json())
-      .then(data => {
-        document.getElementById("estadoNFC").innerText = "";
-        alert(data.message);
-      })
+      .then(data => alert(data.message))
       .catch(err => {
         colaOffline.push(payload);
         localStorage.setItem('colaAsistencia', JSON.stringify(colaOffline));
@@ -235,7 +245,6 @@
       });
     }
 
-    // Restauración de red
     window.addEventListener('online', () => {
       if(colaOffline.length > 0) {
         const tempCola = [...colaOffline];
@@ -246,7 +255,7 @@
         tempCola.forEach(payload => {
           fetch(APPS_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload), redirect: "follow" });
         });
-        alert("📶 Conexión restaurada. Se subieron los registros atrasados.");
+        alert("📶 Conexión restaurada. Sincronizando...");
       }
     });
 
@@ -257,9 +266,7 @@
       if (!navigator.onLine || colaOffline.length > 0) {
         banner.classList.remove("hidden");
         document.getElementById("colaCount").innerText = colaOffline.length;
-      } else {
-        banner.classList.add("hidden");
-      }
+      } else banner.classList.add("hidden");
     }
   </script>
 </body>
