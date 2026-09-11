@@ -35,7 +35,6 @@
       </div>
 
       <div id="estadoNFC" class="text-center text-sm font-bold h-10 flex items-center justify-center mb-2 text-gray-600"></div>
-      
       <div id="qr-reader" class="w-full mb-4 hidden rounded-lg overflow-hidden border-2 border-gray-300"></div>
 
       <!-- REGISTRO MANUAL -->
@@ -52,26 +51,38 @@
           <option value="">-- Cursos cargando... --</option>
         </select>
 
-        <select id="selectAccion" class="w-full border-2 border-gray-300 p-2 rounded mb-4 font-bold bg-white">
+        <select id="selectAccion" onchange="alternarCamposSalida()" class="w-full border-2 border-gray-300 p-2 rounded mb-4 font-bold bg-white">
           <option value="MANUAL">✅ Asistencia (Olvidó Tarjeta)</option>
           <option value="JUSTIFICADA">⚠️ Falta Justificada</option>
+          <option value="SALIDA_ANTICIPADA">🏃 Salida Anticipada</option>
         </select>
+
+        <!-- Input general (Asistencia/Falta) -->
+        <input type="text" id="inputObservaciones" class="w-full border-2 border-gray-300 p-2 rounded mb-4" placeholder="Observaciones (Opcional)...">
+
+        <!-- Formulario especial para Salida Anticipada -->
+        <div id="camposSalidaAnticipada" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-lg shadow-sm">
+          <label class="block text-xs font-bold text-red-700 mb-1">¿Quién se lo lleva?</label>
+          <input type="text" id="inputQuienLleva" class="w-full border border-red-300 p-2 rounded mb-2" placeholder="Ej. Su madre, María Gómez">
+          
+          <label class="block text-xs font-bold text-red-700 mb-1">Motivo de salida:</label>
+          <input type="text" id="inputMotivoSalida" class="w-full border border-red-300 p-2 rounded" placeholder="Ej. Cita médica">
+        </div>
 
         <button onclick="registrarManual()" class="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-lg font-bold shadow-md text-lg">
           💾 Guardar Registro
         </button>
       </div>
       
-      <!-- TOAST DE RESPUESTA FLOTANTE -->
       <div id="toastNotificacion" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-xl shadow-2xl font-bold text-center hidden transition-opacity duration-300 z-50 whitespace-pre-line"></div>
     </div>
   </div>
 
   <script>
     // =================================================================
-    // ⚠️ PEGA AQUÍ TU NUEVA URL
+    // ⚠️ PEGA AQUÍ TU NUEVA URL DE APPS SCRIPT
     // =================================================================
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxwyWNDYGH2yc6Dob-PKA2YbID9GrbTjbjDSgNy1g5UIf54tBdwNTCIL765kzC81OTS/exec"; 
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwii_5UC-OW04OZeNIwIFFztie4H-kZQesmnpsBKmrll0N26u7EZRLQEOB0XTTTlv_p/exec"; 
     
     let usuarioActivo = ""; let baseAlumnos = []; let colaOffline = JSON.parse(localStorage.getItem('colaAsistencia')) || [];
     let ultimosEscaneos = {}; let escanerQRActivo = null; let ndefLector = null;
@@ -90,7 +101,6 @@
         baseAlumnos = JSON.parse(localStorage.getItem("alumnosCache") || "[]");
         if(baseAlumnos.length === 0) return alert("Error crítico sin internet.");
       }
-
       document.getElementById("pantallaLogin").classList.add("hidden");
       document.getElementById("pantallaEscaneo").classList.remove("hidden");
       document.getElementById("infoUsuario").innerText = "👤 " + usuarioActivo;
@@ -109,12 +119,21 @@
       });
     }
 
-    // NFC CONTINUO LÓGICA
+    function alternarCamposSalida() {
+      const accion = document.getElementById("selectAccion").value;
+      if (accion === "SALIDA_ANTICIPADA") {
+        document.getElementById("camposSalidaAnticipada").classList.remove("hidden");
+        document.getElementById("inputObservaciones").classList.add("hidden");
+      } else {
+        document.getElementById("camposSalidaAnticipada").classList.add("hidden");
+        document.getElementById("inputObservaciones").classList.remove("hidden");
+      }
+    }
+
     async function iniciarNFC() {
       if(escanerQRActivo) detenerQR();
       if (!("NDEFReader" in window)) return alert("NFC no soportado.");
       const estado = document.getElementById("estadoNFC");
-      
       try {
         if (!ndefLector) ndefLector = new NDEFReader();
         await ndefLector.scan();
@@ -126,10 +145,8 @@
             const idNfc = new TextDecoder(record.encoding).decode(record.data);
             procesarEscaneo(idNfc, "ESCANEO_NFC", "");
             
-            // Feedback visual rápido y rearme visual
             estado.innerText = "¡LEÍDO! ✅";
             estado.className = "text-center text-xl font-bold h-10 flex items-center justify-center mb-2 text-green-600";
-            
             setTimeout(() => {
               estado.innerText = "LISTO PARA LA SIGUIENTE...\nAcerca tarjeta";
               estado.className = "text-center text-sm font-bold h-10 flex items-center justify-center mb-2 text-indigo-600 animate-pulse";
@@ -139,7 +156,6 @@
       } catch (error) { estado.innerText = "Error NFC."; }
     }
 
-    // LÓGICA QR
     function iniciarQR() {
       const qrContainer = document.getElementById("qr-reader");
       if (!qrContainer.classList.contains("hidden")) return detenerQR();
@@ -152,15 +168,38 @@
         detenerQR();
       }, () => {});
     }
-    function detenerQR() { if(escanerQRActivo) { escanerQRActivo.clear(); escanerQRActivo = null; } document.getElementById("qr-reader").classList.add("hidden"); document.getElementById("estadoNFC").innerText = ""; }
-
-    function registrarManual() {
-      const idNfc = document.getElementById("selectAlumno").value; const accion = document.getElementById("selectAccion").value;
-      if(!idNfc) return alert("❌ Selecciona a un alumno.");
-      procesarEscaneo(idNfc, accion, ""); document.getElementById("selectAlumno").value = "";
+    
+    function detenerQR() { 
+      if(escanerQRActivo) { escanerQRActivo.clear(); escanerQRActivo = null; } 
+      document.getElementById("qr-reader").classList.add("hidden"); 
+      document.getElementById("estadoNFC").innerText = ""; 
     }
 
-    // PROCESAMIENTO
+    function registrarManual() {
+      const idNfc = document.getElementById("selectAlumno").value; 
+      const accion = document.getElementById("selectAccion").value;
+      let obsFinal = "";
+
+      if(!idNfc) return mostrarToast("❌ Selecciona a un alumno.", true);
+
+      if (accion === "SALIDA_ANTICIPADA") {
+        const quien = document.getElementById("inputQuienLleva").value.trim();
+        const motivo = document.getElementById("inputMotivoSalida").value.trim();
+        if(!quien || !motivo) return mostrarToast("❌ Llena quién se lo lleva y el motivo.", true);
+        obsFinal = "Se lo lleva: " + quien + " | Motivo: " + motivo;
+      } else {
+        obsFinal = document.getElementById("inputObservaciones").value.trim();
+      }
+
+      procesarEscaneo(idNfc, accion, obsFinal); 
+      
+      // Limpiar campos
+      document.getElementById("selectAlumno").value = "";
+      document.getElementById("inputQuienLleva").value = "";
+      document.getElementById("inputMotivoSalida").value = "";
+      document.getElementById("inputObservaciones").value = "";
+    }
+
     function procesarEscaneo(idNfc, accion, obs) {
       const ahora = Date.now();
       if (ultimosEscaneos[idNfc] && (ahora - ultimosEscaneos[idNfc] < 60000)) {
@@ -172,7 +211,6 @@
 
       const payload = { accion, idNfc, registradoPor: usuarioActivo, observaciones: obs };
       
-      // Mostrar notificacion temporal buscando el nombre
       let alumno = baseAlumnos.find(a => a.id === idNfc);
       let nombreStr = alumno ? alumno.nombre : "Alumno Desconocido";
       mostrarToast("Enviando...\n" + nombreStr, false);
@@ -188,16 +226,14 @@
       .catch(err => { colaOffline.push(payload); localStorage.setItem('colaAsistencia', JSON.stringify(colaOffline)); });
     }
 
-    // TOAST NOTIFICACIONES (reemplaza los molestos alert)
     let toastTimeout;
     function mostrarToast(mensaje, esError) {
       const toast = document.getElementById("toastNotificacion");
       toast.innerText = mensaje;
-      toast.className = `fixed top-4 left-1/2 transform -translate-x-1/2 px-6 py-4 rounded-xl shadow-2xl font-bold text-center z-50 whitespace-pre-line text-lg w-11/12 max-w-sm ${esError ? 'bg-red-600 text-white' : 'bg-green-600 text-white'}`;
+      toast.className = `fixed top-4 left-1/2 transform -translate-x-1/2 px-6 py-4 rounded-xl shadow-2xl font-bold text-center z-50 whitespace-pre-line text-lg w-11/12 max-w-sm ${esError ? 'bg-red-600 text-white' : 'bg-blue-600 text-white'}`;
       toast.classList.remove("hidden");
-      
       clearTimeout(toastTimeout);
-      toastTimeout = setTimeout(() => { toast.classList.add("hidden"); }, 3000); // Desaparece en 3 segundos
+      toastTimeout = setTimeout(() => { toast.classList.add("hidden"); }, 3500);
     }
   </script>
 </body>
