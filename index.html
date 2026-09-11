@@ -3,87 +3,78 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Escáner de Asistencia</title>
+  <title>Asistencia Escolar</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body { background-color: #f3f4f6; }
-    .hidden { display: none !important; }
-  </style>
+  <style> body { background-color: #f3f4f6; } </style>
 </head>
 <body class="p-4 font-sans text-gray-800">
 
-  <div class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6 mt-4">
-    <h1 class="text-2xl font-bold text-center text-blue-600 mb-4">Control de Acceso</h1>
+  <div class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6 mt-2">
+    <h1 class="text-2xl font-bold text-center text-blue-600 mb-4">Acceso Escolar</h1>
 
     <!-- PANTALLA LOGIN -->
     <div id="pantallaLogin">
-      <label class="block text-sm font-medium text-gray-700">Nombre del Prefecto/Maestro:</label>
-      <input type="text" id="nombrePrefecto" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2 focus:border-blue-500 focus:ring-blue-500" placeholder="Ej. Prof. Roberto">
-      <button onclick="iniciarSesion()" class="mt-4 w-full bg-blue-600 text-white py-2 rounded-lg font-bold">Iniciar Turno</button>
-      <p id="cargandoAlumnos" class="text-sm text-center text-blue-600 mt-2 hidden font-bold">Descargando base de datos, espera...</p>
+      <label class="block text-sm font-bold text-gray-700">Nombre de quien registra:</label>
+      <input type="text" id="nombrePrefecto" class="mt-2 block w-full rounded-md border-gray-400 shadow-sm border p-3 focus:border-blue-500 focus:ring-blue-500" placeholder="Ej. Prof. Roberto">
+      <button onclick="iniciarSesion()" class="mt-4 w-full bg-blue-600 text-white py-3 rounded-lg font-bold text-lg">Ingresar</button>
+      
+      <!-- Mensajes de estado al cargar -->
+      <p id="msjCargando" class="text-sm text-center text-blue-600 mt-4 font-bold hidden">Conectando con Google Sheets, espera...</p>
+      <div id="msjError" class="mt-4 bg-red-100 text-red-700 p-3 rounded text-sm hidden font-bold"></div>
     </div>
 
-    <!-- PANTALLA PRINCIPAL -->
+    <!-- PANTALLA PRINCIPAL (Oculta al inicio) -->
     <div id="pantallaEscaneo" class="hidden">
-      <p class="text-center text-sm font-semibold mb-4 bg-green-100 text-green-800 p-2 rounded" id="infoUsuario"></p>
+      <p class="text-center text-sm font-bold mb-4 bg-green-100 text-green-800 p-2 rounded" id="infoUsuario"></p>
 
-      <!-- BOTONES NFC Y QR -->
-      <div class="grid grid-cols-2 gap-4 mb-6">
-        <button onclick="iniciarNFC()" class="bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-xl font-bold flex flex-col items-center shadow-lg">
-          <span class="text-3xl mb-1">📡</span> Escanear NFC
-        </button>
-        <button onclick="alert('Función de cámara QR en desarrollo.')" class="bg-gray-800 hover:bg-gray-900 text-white py-4 rounded-xl font-bold flex flex-col items-center shadow-lg">
-          <span class="text-3xl mb-1">📷</span> Escanear QR
-        </button>
-      </div>
-
-      <div id="estadoNFC" class="text-center text-sm font-bold h-6 mb-4 text-gray-600"></div>
-
-      <!-- BOTÓN PARA ABRIR MENÚ MANUAL -->
-      <button onclick="toggleManual()" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 py-3 rounded-lg font-bold shadow mb-4 flex justify-center items-center">
-        <span>📝 Abrir Menú Manual / Justificantes</span>
+      <!-- BOTÓN NFC -->
+      <button onclick="iniciarNFC()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-xl font-bold flex flex-col items-center shadow-lg mb-2">
+        <span class="text-3xl mb-1">📡</span> Iniciar Lector NFC
       </button>
+      <div id="estadoNFC" class="text-center text-sm font-bold h-6 mb-6 text-gray-600"></div>
 
-      <!-- SECCIÓN REGISTRO MANUAL (Oculta por defecto) -->
-      <div id="seccionManual" class="hidden border-t pt-4 border-gray-200 bg-gray-50 p-4 rounded-lg">
-        <h3 class="text-md font-bold text-gray-700 mb-3 text-center">Registro Manual</h3>
+      <!-- SECCIÓN REGISTRO MANUAL (SIEMPRE VISIBLE) -->
+      <div class="border-2 border-gray-200 bg-gray-50 p-4 rounded-lg">
+        <h3 class="text-lg font-bold text-gray-800 mb-3 border-b pb-2 text-center">📝 Registro Manual</h3>
         
-        <!-- Filtros -->
-        <div class="grid grid-cols-3 gap-2 mb-3">
-          <select id="filtroTurno" onchange="filtrarAlumnos()" class="border p-2 rounded text-sm bg-white"><option value="MATUTINO">Matutino</option><option value="VESPERTINO">Vespertino</option></select>
-          <select id="filtroGrado" onchange="filtrarAlumnos()" class="border p-2 rounded text-sm bg-white"><option value="1">1º</option><option value="2">2º</option><option value="3">3º</option></select>
-          <select id="filtroGrupo" onchange="filtrarAlumnos()" class="border p-2 rounded text-sm bg-white"><option value="A">A</option><option value="B">B</option><option value="C">C</option></select>
+        <label class="block text-xs font-bold text-gray-500 mb-1">1. Filtra tu grupo:</label>
+        <div class="grid grid-cols-3 gap-2 mb-4">
+          <select id="filtroTurno" onchange="filtrarAlumnos()" class="border-2 border-gray-300 p-2 rounded font-bold text-sm bg-white"><option value="MATUTINO">Matutino</option><option value="VESPERTINO">Vespertino</option></select>
+          <select id="filtroGrado" onchange="filtrarAlumnos()" class="border-2 border-gray-300 p-2 rounded font-bold text-sm bg-white"><option value="1">1º</option><option value="2">2º</option><option value="3">3º</option></select>
+          <select id="filtroGrupo" onchange="filtrarAlumnos()" class="border-2 border-gray-300 p-2 rounded font-bold text-sm bg-white"><option value="A">A</option><option value="B">B</option><option value="C">C</option></select>
         </div>
 
-        <label class="block text-xs font-bold text-gray-600 mb-1">Seleccionar Alumno:</label>
-        <select id="selectAlumno" class="w-full border border-blue-400 p-2 rounded mb-3 bg-white shadow-sm">
-          <option value="">-- Primero elige Turno, Grado y Grupo --</option>
+        <label class="block text-xs font-bold text-gray-500 mb-1">2. Selecciona al alumno:</label>
+        <select id="selectAlumno" class="w-full border-2 border-blue-400 p-2 rounded mb-4 bg-white font-bold text-gray-700 shadow-sm">
+          <option value="">-- Cursos cargando... --</option>
         </select>
 
-        <label class="block text-xs font-bold text-gray-600 mb-1">Tipo de Registro:</label>
-        <select id="selectAccion" class="w-full border p-2 rounded mb-3 text-blue-800 font-bold bg-blue-100">
-          <option value="MANUAL">✅ Asistencia Manual (Olvidó Tarjeta)</option>
-          <option value="JUSTIFICADA">⚠️ Falta Justificada (Enfermedad/Aviso)</option>
+        <label class="block text-xs font-bold text-gray-500 mb-1">3. Tipo de asistencia:</label>
+        <select id="selectAccion" class="w-full border-2 border-gray-300 p-2 rounded mb-4 font-bold bg-white">
+          <option value="MANUAL">✅ Asistencia (Olvidó Tarjeta)</option>
+          <option value="JUSTIFICADA">⚠️ Falta Justificada (Aviso)</option>
         </select>
 
-        <label class="block text-xs font-bold text-gray-600 mb-1">Motivo / Notas (Opcional):</label>
-        <input type="text" id="inputObservaciones" class="w-full border p-2 rounded mb-4" placeholder="Ej. Cita médica, Problema familiar...">
+        <label class="block text-xs font-bold text-gray-500 mb-1">4. Observaciones (opcional):</label>
+        <input type="text" id="inputObservaciones" class="w-full border-2 border-gray-300 p-2 rounded mb-4" placeholder="Ej. Cita médica...">
         
-        <button onclick="registrarManual()" class="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-lg font-bold shadow-lg text-lg">
+        <button onclick="registrarManual()" class="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-lg font-bold shadow-md text-lg">
           💾 Guardar Registro
         </button>
       </div>
 
       <!-- COLA OFFLINE -->
-      <div id="offlineBanner" class="hidden mt-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-2 text-xs text-center rounded">
-        Estás sin conexión. Registros pendientes: <span id="colaCount" class="font-bold text-red-600">0</span>
+      <div id="offlineBanner" class="hidden mt-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-2 text-sm text-center rounded font-bold">
+        Sin Internet. Pendientes de subir: <span id="colaCount" class="text-red-600">0</span>
       </div>
     </div>
   </div>
 
   <script>
-    // ⚠️ REEMPLAZA CON TU NUEVA URL DEL SCRIPT (Asegúrate de haber creado una NUEVA VERSIÓN)
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwpbh1Isnul9HjLJ3xbHa05gM2eFFYP9pDK_L0_yjiEknYlqJUbDNhLokcw9zDGiEVM/exec"; 
+    // =================================================================
+    // ⚠️ PEGA AQUÍ LA NUEVA URL QUE COPIASTE DE GOOGLE APPS SCRIPT ⚠️
+    // =================================================================
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/TU_NUEVO_ID_AQUI/exec"; 
     
     let usuarioActivo = "";
     let baseAlumnos = []; 
@@ -94,65 +85,68 @@
       usuarioActivo = document.getElementById("nombrePrefecto").value.trim();
       if(!usuarioActivo) return alert("Ingresa tu nombre");
       
-      const btnLoading = document.getElementById("cargandoAlumnos");
-      btnLoading.classList.remove("hidden");
+      document.getElementById("msjCargando").classList.remove("hidden");
+      document.getElementById("msjError").classList.add("hidden");
       
       try {
-        const res = await fetch(APPS_SCRIPT_URL + "?action=getAlumnos");
-        const textoRespuesta = await res.text(); // Leemos como texto primero para evitar errores silenciosos
+        // Pedimos los datos a Google Sheets
+        const urlPeticion = APPS_SCRIPT_URL + "?action=getAlumnos";
+        const respuesta = await fetch(urlPeticion, { redirect: "follow" });
+        const textoData = await respuesta.text(); 
         
         try {
-          baseAlumnos = JSON.parse(textoRespuesta);
+          baseAlumnos = JSON.parse(textoData);
+          
+          if(baseAlumnos.length > 0 && baseAlumnos[0].error) {
+            throw new Error("El script devolvió un error: " + baseAlumnos[0].error);
+          }
+
           localStorage.setItem("alumnosCache", JSON.stringify(baseAlumnos));
-        } catch (jsonErr) {
-          console.error("El servidor no devolvió un JSON:", textoRespuesta);
-          alert("Error: Google Sheets no devolvió los alumnos. Verifica que hayas publicado una NUEVA VERSIÓN del script.");
-          throw new Error("Respuesta inválida");
+        } catch (e) {
+          throw new Error("Respuesta no válida del servidor. ¿Pegaste la URL correcta? Respuesta: " + textoData.substring(0, 50));
         }
       } catch (err) {
+        // Si no hay internet o falló el enlace, cargamos desde el caché local del celular
         baseAlumnos = JSON.parse(localStorage.getItem("alumnosCache") || "[]");
         if(baseAlumnos.length === 0) {
-          alert("Sin conexión y sin caché. La lista manual estará vacía.");
+          document.getElementById("msjCargando").classList.add("hidden");
+          const cajaError = document.getElementById("msjError");
+          cajaError.innerText = "Error crítico: " + err.message;
+          cajaError.classList.remove("hidden");
+          return; // Detiene el inicio de sesión
         } else {
-          alert("Trabajando en modo offline. Se cargó la lista de alumnos guardada previamente.");
+          alert("Sin conexión. Trabajando en modo OFFLINE con " + baseAlumnos.length + " alumnos guardados previamente.");
         }
       }
 
+      // Si llegamos aquí, el inicio de sesión fue un éxito
       document.getElementById("pantallaLogin").classList.add("hidden");
       document.getElementById("pantallaEscaneo").classList.remove("hidden");
-      document.getElementById("infoUsuario").innerText = "Activo: " + usuarioActivo;
+      document.getElementById("infoUsuario").innerText = "👤 Usuario Activo: " + usuarioActivo;
       
-      filtrarAlumnos(); 
+      filtrarAlumnos(); // Carga la lista inicial del Grupo 1ºA Matutino
       actualizarUIOffline();
     }
 
-    function toggleManual() {
-      const seccion = document.getElementById("seccionManual");
-      if(seccion.classList.contains("hidden")) {
-        seccion.classList.remove("hidden");
-        // Hacemos scroll hacia abajo suavemente para que el usuario lo vea
-        seccion.scrollIntoView({ behavior: 'smooth' });
-      } else {
-        seccion.classList.add("hidden");
-      }
-    }
-
+    // Filtra el select en base a los botones
     function filtrarAlumnos() {
       const turno = document.getElementById("filtroTurno").value;
       const grado = document.getElementById("filtroGrado").value;
       const grupo = document.getElementById("filtroGrupo").value;
-      
       const select = document.getElementById("selectAlumno");
-      select.innerHTML = '<option value="">-- Selecciona un alumno --</option>';
+      
+      select.innerHTML = ''; // Limpiamos lista
       
       const filtrados = baseAlumnos.filter(a => a.turno === turno && a.grado === grado && a.grupo === grupo);
       
       if(filtrados.length === 0) {
-        select.innerHTML = '<option value="">No hay alumnos en este grupo</option>';
+        select.innerHTML = '<option value="">❌ No hay alumnos registrados en este grupo</option>';
         return;
       }
 
-      // Ordenar alfabéticamente
+      select.innerHTML = '<option value="">-- Toca aquí para elegir alumno --</option>';
+      
+      // Ordenamos por nombre
       filtrados.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
       filtrados.forEach(a => {
@@ -163,15 +157,15 @@
       });
     }
 
-    // (El resto de las funciones NFC y procesarEscaneo se mantienen igual)
+    // Funciones NFC
     async function iniciarNFC() {
-      if (!("NDEFReader" in window)) return alert("NFC no soportado en este dispositivo (Usa Chrome en Android).");
+      if (!("NDEFReader" in window)) return alert("Tu dispositivo o navegador no soporta lectura NFC (Usa Chrome en Android).");
       const estado = document.getElementById("estadoNFC");
       try {
         const ndef = new NDEFReader();
         await ndef.scan();
-        estado.innerText = "Acerca la tarjeta al teléfono...";
-        estado.className = "text-center text-sm font-bold h-6 mb-4 text-blue-600 animate-pulse";
+        estado.innerText = "Acerca la tarjeta al reverso del celular...";
+        estado.className = "text-center text-sm font-bold h-6 mb-6 text-blue-600 animate-pulse";
         
         ndef.addEventListener("reading", ({ message }) => {
           for (const record of message.records) {
@@ -181,7 +175,8 @@
           }
         });
       } catch (error) {
-        estado.innerText = "Error NFC: " + error;
+        estado.innerText = "Error de Lector NFC.";
+        alert("Error al iniciar NFC: Verifica que el NFC esté encendido en tu celular.");
       }
     }
 
@@ -190,13 +185,12 @@
       const accion = document.getElementById("selectAccion").value;
       const obs = document.getElementById("inputObservaciones").value;
       
-      if(!idNfc) return alert("Por favor selecciona un alumno.");
+      if(!idNfc) return alert("❌ Por favor selecciona a un alumno de la lista antes de guardar.");
       
       procesarEscaneo(idNfc, accion, obs);
       
       document.getElementById("selectAlumno").value = "";
       document.getElementById("inputObservaciones").value = "";
-      toggleManual(); // Ocultar menú tras registrar
     }
 
     function procesarEscaneo(idNfc, accion, observaciones) {
@@ -218,19 +212,20 @@
         colaOffline.push(payload);
         localStorage.setItem('colaAsistencia', JSON.stringify(colaOffline));
         actualizarUIOffline();
-        alert("Sin internet. Guardado localmente.");
+        alert("💾 Sin internet: Registro guardado en el celular. Se subirá automáticamente al recuperar señal.");
       }
     }
 
     function enviarAGoogle(payload) {
-      document.getElementById("estadoNFC").innerText = "Enviando...";
+      document.getElementById("estadoNFC").innerText = "Enviando registro...";
       fetch(APPS_SCRIPT_URL, {
         method: "POST",
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        redirect: "follow"
       })
       .then(res => res.json())
       .then(data => {
-        document.getElementById("estadoNFC").innerText = "¡Listo!";
+        document.getElementById("estadoNFC").innerText = "";
         alert(data.message);
       })
       .catch(err => {
@@ -240,6 +235,7 @@
       });
     }
 
+    // Restauración de red
     window.addEventListener('online', () => {
       if(colaOffline.length > 0) {
         const tempCola = [...colaOffline];
@@ -248,9 +244,9 @@
         actualizarUIOffline();
         
         tempCola.forEach(payload => {
-          fetch(APPS_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
+          fetch(APPS_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload), redirect: "follow" });
         });
-        alert("Conexión restaurada. Sincronizando registros atrasados.");
+        alert("📶 Conexión restaurada. Se subieron los registros atrasados.");
       }
     });
 
