@@ -14,7 +14,6 @@
     
     <!-- PANTALLA DE LOGIN -->
     <div id="pantallaLogin" class="text-center">
-      <!-- LOGO DE LA ESCUELA -->
       <img src="https://i.postimg.cc/W1qN6Fmr/LOGO-F30.jpg" alt="Logo Escuela Foránea 30" class="mx-auto w-32 md:w-36 mb-4 object-contain drop-shadow-md rounded-lg">
       
       <h1 class="text-2xl font-bold text-center text-blue-700 mb-1">Foránea No. 30</h1>
@@ -51,9 +50,20 @@
         <h3 class="text-lg font-bold text-gray-800 mb-3 border-b pb-2 text-center">📝 Registro Manual</h3>
         
         <div class="grid grid-cols-3 gap-2 mb-4">
-          <select id="filtroTurno" onchange="filtrarAlumnos()" class="border-2 border-gray-300 p-2 rounded font-bold text-sm bg-white"><option value="MATUTINO">Matutino</option><option value="VESPERTINO">Vespertino</option></select>
-          <select id="filtroGrado" onchange="filtrarAlumnos()" class="border-2 border-gray-300 p-2 rounded font-bold text-sm bg-white"><option value="1">1º</option><option value="2">2º</option><option value="3">3º</option></select>
-          <select id="filtroGrupo" onchange="filtrarAlumnos()" class="border-2 border-gray-300 p-2 rounded font-bold text-sm bg-white"><option value="A">A</option><option value="B">B</option><option value="C">C</option></select>
+          <select id="filtroTurno" onchange="filtrarAlumnos()" class="border-2 border-gray-300 p-2 rounded font-bold text-sm bg-white">
+            <option value="MATUTINO">Matutino</option>
+            <option value="VESPERTINO">Vespertino</option>
+          </select>
+          <select id="filtroGrado" onchange="filtrarAlumnos()" class="border-2 border-gray-300 p-2 rounded font-bold text-sm bg-white">
+            <option value="1">1º</option>
+            <option value="2">2º</option>
+            <option value="3">3º</option>
+          </select>
+          <select id="filtroGrupo" onchange="filtrarAlumnos()" class="border-2 border-gray-300 p-2 rounded font-bold text-sm bg-white">
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+          </select>
         </div>
 
         <select id="selectAlumno" class="w-full border-2 border-blue-400 p-2 rounded mb-4 bg-white font-bold text-gray-700">
@@ -97,22 +107,21 @@
     let ultimosEscaneos = {}; 
     let escanerQRActivo = null; 
     let ndefLector = null;
-    let qrEnPausa = false; // Control de espera entre escaneos QR
+    let qrEnPausa = false;
 
     // SINTETIZADOR DE SONIDO 8-BITS (WEB AUDIO API)
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-    // SONIDO ESTILO MARIO BROS 1UP (ÉXITO)
     function reproducirSonidoExito() {
       if (audioCtx.state === 'suspended') audioCtx.resume();
       
       const notas = [
-        { freq: 659.25, dur: 0.08 }, // E5
-        { freq: 783.99, dur: 0.08 }, // G5
-        { freq: 1318.51, dur: 0.08 },// E6
-        { freq: 1046.50, dur: 0.08 },// C6
-        { freq: 1174.66, dur: 0.08 },// D6
-        { freq: 1567.98, dur: 0.15 } // G6
+        { freq: 659.25, dur: 0.08 },
+        { freq: 783.99, dur: 0.08 },
+        { freq: 1318.51, dur: 0.08 },
+        { freq: 1046.50, dur: 0.08 },
+        { freq: 1174.66, dur: 0.08 },
+        { freq: 1567.98, dur: 0.15 }
       ];
       
       let tiempoInicio = audioCtx.currentTime;
@@ -121,7 +130,7 @@
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         
-        osc.type = 'square'; // Tipo 'square' da el sonido de sintetizador 8-bits retro
+        osc.type = 'square';
         osc.frequency.setValueAtTime(nota.freq, tiempoInicio);
         
         gain.gain.setValueAtTime(0.12, tiempoInicio);
@@ -137,7 +146,6 @@
       });
     }
 
-    // SONIDO DE ERROR
     function reproducirSonidoError() {
       if (audioCtx.state === 'suspended') audioCtx.resume();
       const osc = audioCtx.createOscillator();
@@ -179,14 +187,21 @@
     }
 
     function filtrarAlumnos() {
-      const turno = document.getElementById("filtroTurno").value, grado = document.getElementById("filtroGrado").value, grupo = document.getElementById("filtroGrupo").value;
-      const select = document.getElementById("selectAlumno"); select.innerHTML = ''; 
+      const turno = document.getElementById("filtroTurno").value, 
+            grado = document.getElementById("filtroGrado").value, 
+            grupo = document.getElementById("filtroGrupo").value;
+      const select = document.getElementById("selectAlumno"); 
+      select.innerHTML = ''; 
+      
       const filtrados = baseAlumnos.filter(a => a.turno === turno && a.grado === grado && a.grupo === grupo);
       
       if(filtrados.length === 0) return select.innerHTML = '<option value="">❌ No hay alumnos en este grupo</option>';
       select.innerHTML = '<option value="">-- Selecciona un alumno --</option>';
       filtrados.sort((a, b) => a.nombre.localeCompare(b.nombre)).forEach(a => {
-        let opt = document.createElement("option"); opt.value = a.id; opt.text = a.nombre; select.appendChild(opt);
+        let opt = document.createElement("option"); 
+        opt.value = a.id; 
+        opt.text = a.nombre; 
+        select.appendChild(opt);
       });
     }
 
@@ -228,7 +243,6 @@
       } catch (error) { estado.innerText = "Error al iniciar NFC."; }
     }
 
-    // ESCÁNER QR CON ESPERA DE 1 SEGUNDO
     function iniciarQR() {
       const qrContainer = document.getElementById("qr-reader");
       if (!qrContainer.classList.contains("hidden")) return detenerQR();
@@ -241,16 +255,14 @@
       escanerQRActivo = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: 250 });
       
       escanerQRActivo.render((decodedText) => {
-        // Ignorar lecturas si está en el periodo de espera de 1 segundo
         if (qrEnPausa) return;
         
-        qrEnPausa = true; // Activar pausa
+        qrEnPausa = true;
         procesarEscaneo(decodedText, "ESCANEO_QR", "");
         
         estado.innerText = "¡QR LEÍDO! 🍄";
         estado.className = "text-center text-xl font-bold h-10 flex items-center justify-center mb-2 text-green-600";
         
-        // Esperar 1 segundo exacto antes de permitir el siguiente escaneo
         setTimeout(() => {
           qrEnPausa = false;
           if (escanerQRActivo) {
@@ -261,86 +273,134 @@
         
       }, () => {});
     }
-    
+
     function detenerQR() { 
-      if(escanerQRActivo) { escanerQRActivo.clear(); escanerQRActivo = null; } 
-      document.getElementById("qr-reader").classList.add("hidden"); 
-      document.getElementById("estadoNFC").innerText = ""; 
-      qrEnPausa = false;
+      if(escanerQRActivo) { 
+        escanerQRActivo.clear(); 
+        escanerQRActivo = null; 
+      } 
+      document.getElementById("qr-reader").classList.add("hidden");
+      document.getElementById("estadoNFC").innerText = "";
     }
 
-    function registrarManual() {
-      const idNfc = document.getElementById("selectAlumno").value; 
-      const accion = document.getElementById("selectAccion").value;
-      let obsFinal = "";
+    async function procesarEscaneo(idNfc, metodo, observacionesExtra = "") {
+      if (!idNfc) return;
 
-      if(!idNfc) return mostrarToast("❌ Selecciona a un alumno.", true);
+      // Antirrebote: Evitar duplicados si escanea dos veces en menos de 3 segundos
+      const ahora = Date.now();
+      if (ultimosEscaneos[idNfc] && (ahora - ultimosEscaneos[idNfc] < 3000)) {
+        return;
+      }
+      ultimosEscaneos[idNfc] = ahora;
+
+      const payload = {
+        idNfc: idNfc,
+        accion: "ENTRADA",
+        registradoPor: usuarioActivo,
+        observaciones: observacionesExtra || ("Vía " + metodo)
+      };
+
+      await enviarAlServidor(payload);
+    }
+
+    async function registrarManual() {
+      const idAlumno = document.getElementById("selectAlumno").value;
+      if (!idAlumno) return alert("Por favor selecciona un alumno.");
+
+      const accion = document.getElementById("selectAccion").value;
+      let observaciones = "";
 
       if (accion === "SALIDA_ANTICIPADA") {
         const quien = document.getElementById("inputQuienLleva").value.trim();
         const motivo = document.getElementById("inputMotivoSalida").value.trim();
-        if(!quien || !motivo) return mostrarToast("❌ Completa quién se lo lleva y el motivo.", true);
-        obsFinal = "Se lo lleva: " + quien + " | Motivo: " + motivo;
+        if (!quien || !motivo) {
+          return alert("Por favor completa quién retira al alumno y el motivo.");
+        }
+        observaciones = `Retira: ${quien} | Motivo: ${motivo}`;
       } else {
-        obsFinal = document.getElementById("inputObservaciones").value.trim();
+        observaciones = document.getElementById("inputObservaciones").value.trim();
       }
 
-      procesarEscaneo(idNfc, accion, obsFinal); 
-      
-      document.getElementById("selectAlumno").value = "";
+      const payload = {
+        idNfc: idAlumno,
+        accion: accion,
+        registradoPor: usuarioActivo,
+        observaciones: observaciones
+      };
+
+      await enviarAlServidor(payload);
+
       document.getElementById("inputQuienLleva").value = "";
       document.getElementById("inputMotivoSalida").value = "";
       document.getElementById("inputObservaciones").value = "";
     }
 
-    function procesarEscaneo(idNfc, accion, obs) {
-      const ahora = Date.now();
-      if (ultimosEscaneos[idNfc] && (ahora - ultimosEscaneos[idNfc] < 60000)) {
-        if ("vibrate" in navigator) navigator.vibrate([100, 50, 100]);
-        return mostrarToast("⚠️ Registrado recientemente", true);
-      }
-      ultimosEscaneos[idNfc] = ahora;
-      if ("vibrate" in navigator) navigator.vibrate(200);
+    async function enviarAlServidor(payload) {
+      mostrarNotificacion("Enviando registro...", false);
 
-      const payload = { accion, idNfc, registradoPor: usuarioActivo, observaciones: obs };
-      
-      let alumno = baseAlumnos.find(a => a.id === idNfc);
-      let nombreStr = alumno ? alumno.nombre : "Alumno Desconocido";
-      mostrarToast("Enviando...\n" + nombreStr, false);
+      try {
+        const respuesta = await fetch(APPS_SCRIPT_URL, {
+          method: "POST",
+          mode: "cors",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        });
 
-      if (navigator.onLine) enviarAGoogle(payload);
-      else { 
-        colaOffline.push(payload); 
-        localStorage.setItem('colaAsistencia', JSON.stringify(colaOffline)); 
-        mostrarToast("💾 Guardado Offline\n" + nombreStr, false); 
-      }
-    }
+        const resData = await respuesta.json();
 
-    function enviarAGoogle(payload) {
-      fetch(APPS_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload), redirect: "follow" })
-      .then(res => res.json())
-      .then(data => mostrarToast(data.message, data.status === "ERROR"))
-      .catch(err => { 
-        colaOffline.push(payload); 
-        localStorage.setItem('colaAsistencia', JSON.stringify(colaOffline)); 
-      });
-    }
-
-    let toastTimeout;
-    function mostrarToast(mensaje, esError) {
-      if (esError) {
-        reproducirSonidoError();
-      } else {
+        if (resData.status === "SUCCESS") {
+          reproducirSonidoExito();
+          mostrarNotificacion(resData.message, false);
+        } else {
+          reproducirSonidoError();
+          mostrarNotificacion("❌ Error: " + resData.message, true);
+        }
+      } catch (err) {
+        // En caso de fallo de red, se almacena localmente
+        colaOffline.push(payload);
+        localStorage.setItem('colaAsistencia', JSON.stringify(colaOffline));
         reproducirSonidoExito();
+        mostrarNotificacion("⚠️ Sin conexión. Guardado en memoria local (" + colaOffline.length + " pendientes)", false);
       }
+    }
 
+    function mostrarNotificacion(mensaje, esError = false) {
       const toast = document.getElementById("toastNotificacion");
       toast.innerText = mensaje;
-      toast.className = `fixed top-4 left-1/2 transform -translate-x-1/2 px-6 py-4 rounded-xl shadow-2xl font-bold text-center z-50 whitespace-pre-line text-lg w-11/12 max-w-sm ${esError ? 'bg-red-600 text-white' : 'bg-blue-600 text-white'}`;
+      toast.className = `fixed top-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-xl shadow-2xl font-bold text-center z-50 whitespace-pre-line ${
+        esError ? "bg-red-600 text-white" : "bg-green-600 text-white"
+      }`;
       toast.classList.remove("hidden");
-      
-      clearTimeout(toastTimeout);
-      toastTimeout = setTimeout(() => { toast.classList.add("hidden"); }, 2500);
+
+      setTimeout(() => {
+        toast.classList.add("hidden");
+      }, 3500);
+    }
+
+    // Auto-sincronizar registros offline al recuperar Internet
+    window.addEventListener('online', sincronizarOffline);
+
+    async function sincronizarOffline() {
+      if (colaOffline.length === 0) return;
+      mostrarNotificacion(`Sincronizando ${colaOffline.length} registros guardados offline...`, false);
+
+      const copiaCola = [...colaOffline];
+      colaOffline = [];
+      localStorage.setItem('colaAsistencia', JSON.stringify(colaOffline));
+
+      for (const item of copiaCola) {
+        try {
+          await fetch(APPS_SCRIPT_URL, {
+            method: "POST",
+            mode: "cors",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(item)
+          });
+        } catch (e) {
+          colaOffline.push(item);
+          localStorage.setItem('colaAsistencia', JSON.stringify(colaOffline));
+        }
+      }
     }
   </script>
 </body>
