@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Asistencia Escolar</title>
+  <title>Asistencia Escolar - Foránea 30</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style> body { background-color: #f3f4f6; } </style>
@@ -11,24 +11,29 @@
 <body class="p-4 font-sans text-gray-800">
 
   <div class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6 mt-2">
-    <h1 class="text-2xl font-bold text-center text-blue-600 mb-4">Acceso Escolar Foránea 30</h1>
+    
+    <!-- PANTALLA DE LOGIN -->
+    <div id="pantallaLogin" class="text-center">
+      <!-- LOGO DE LA ESCUELA -->
+      <img src="URL_DIRECTA_DE_TU_LOGO_AQUI.jpg" alt="Logo Escuela Foránea 30" class="mx-auto w-32 md:w-36 mb-4 object-contain drop-shadow-md rounded-lg">
+      
+      <h1 class="text-2xl font-bold text-center text-blue-700 mb-1">Foránea No. 30</h1>
+      <p class="text-xs text-gray-500 mb-6 font-semibold">SISTEMA DE ASISTENCIA ESCOLAR</p>
 
-    <!-- LOGIN -->
-<div id="pantallaLogin" class="text-center">
-  <!-- LOGO DE LA ESCUELA -->
-  <img src="https://i.postimg.cc/W1qN6Fmr/LOGO-F30.jpg" alt="Logo Foránea 30" class="mx-auto w-32 md:w-40 mb-6 object-contain drop-shadow-md rounded-xl">
-  
-  <label class="block text-sm font-bold text-gray-700 text-left">Nombre de quien registra:</label>
-  <input type="text" id="nombrePrefecto" class="mt-2 block w-full rounded-md border-gray-400 shadow-sm border p-3 text-left" placeholder="Ej. Prof. Tizok">
-  
-  <button onclick="iniciarSesion()" class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold text-lg transition-colors">Ingresar</button>
-  <p id="msjCargando" class="text-sm text-center text-blue-600 mt-4 font-bold hidden">Conectando, espera...</p>
-</div>
+      <label class="block text-sm font-bold text-gray-700 text-left">Nombre de quien registra:</label>
+      <input type="text" id="nombrePrefecto" class="mt-2 block w-full rounded-md border-gray-400 shadow-sm border p-3 text-left" placeholder="Ej. Prof. Tizok">
+      
+      <button onclick="iniciarSesion()" class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold text-lg transition-colors">
+        Ingresar
+      </button>
+      <p id="msjCargando" class="text-sm text-center text-blue-600 mt-4 font-bold hidden">Conectando, espera...</p>
+    </div>
 
     <!-- PANTALLA PRINCIPAL -->
     <div id="pantallaEscaneo" class="hidden">
       <p class="text-center text-sm font-bold mb-4 bg-green-100 text-green-800 p-2 rounded" id="infoUsuario"></p>
 
+      <!-- BOTONES ESCANER -->
       <div class="grid grid-cols-2 gap-4 mb-2">
         <button onclick="iniciarNFC()" class="bg-indigo-600 hover:bg-indigo-700 text-white py-5 rounded-xl font-bold flex flex-col items-center shadow-lg transition transform hover:scale-105">
           <span class="text-4xl mb-2">📡</span> NFC Continuo
@@ -41,7 +46,7 @@
       <div id="estadoNFC" class="text-center text-sm font-bold h-10 flex items-center justify-center mb-2 text-gray-600"></div>
       <div id="qr-reader" class="w-full mb-4 hidden rounded-lg overflow-hidden border-2 border-gray-300"></div>
 
-      <!-- REGISTRO MANUAL -->
+      <!-- SECCIÓN REGISTRO MANUAL -->
       <div class="border-2 border-gray-200 bg-gray-50 p-4 rounded-lg mt-2">
         <h3 class="text-lg font-bold text-gray-800 mb-3 border-b pb-2 text-center">📝 Registro Manual</h3>
         
@@ -56,21 +61,21 @@
         </select>
 
         <select id="selectAccion" onchange="alternarCamposSalida()" class="w-full border-2 border-gray-300 p-2 rounded mb-4 font-bold bg-white">
-          <option value="MANUAL">✅ Asistencia (Olvidó TAG)</option>
+          <option value="MANUAL">✅ Asistencia (Olvidó Tarjeta)</option>
           <option value="JUSTIFICADA">⚠️ Falta Justificada</option>
           <option value="SALIDA_ANTICIPADA">🏃 Salida Anticipada</option>
         </select>
 
-        <!-- Input general (Asistencia/Falta) -->
+        <!-- Campo Observaciones normal -->
         <input type="text" id="inputObservaciones" class="w-full border-2 border-gray-300 p-2 rounded mb-4" placeholder="Observaciones (Opcional)...">
 
         <!-- Formulario especial para Salida Anticipada -->
         <div id="camposSalidaAnticipada" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-lg shadow-sm">
           <label class="block text-xs font-bold text-red-700 mb-1">¿Quién se lo lleva?</label>
-          <input type="text" id="inputQuienLleva" class="w-full border border-red-300 p-2 rounded mb-2" placeholder="Ej. Su madre, María Gómez">
+          <input type="text" id="inputQuienLleva" class="w-full border border-red-300 p-2 rounded mb-2 bg-white" placeholder="Ej. Su madre, María Gómez">
           
           <label class="block text-xs font-bold text-red-700 mb-1">Motivo de salida:</label>
-          <input type="text" id="inputMotivoSalida" class="w-full border border-red-300 p-2 rounded" placeholder="Ej. Cita médica">
+          <input type="text" id="inputMotivoSalida" class="w-full border border-red-300 p-2 rounded bg-white" placeholder="Ej. Cita médica">
         </div>
 
         <button onclick="registrarManual()" class="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-lg font-bold shadow-md text-lg">
@@ -78,22 +83,27 @@
         </button>
       </div>
       
+      <!-- NOTIFICACIÓN TIPO TOAST -->
       <div id="toastNotificacion" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-xl shadow-2xl font-bold text-center hidden transition-opacity duration-300 z-50 whitespace-pre-line"></div>
     </div>
   </div>
 
   <script>
     // =================================================================
-    // ⚠️ PEGA AQUÍ TU NUEVA URL DE APPS SCRIPT
+    // ⚠️ PEGA AQUÍ LA URL DE TU WEB APP DE GOOGLE APPS SCRIPT
     // =================================================================
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwii_5UC-OW04OZeNIwIFFztie4H-kZQesmnpsBKmrll0N26u7EZRLQEOB0XTTTlv_p/exec"; 
     
-    let usuarioActivo = ""; let baseAlumnos = []; let colaOffline = JSON.parse(localStorage.getItem('colaAsistencia')) || [];
-    let ultimosEscaneos = {}; let escanerQRActivo = null; let ndefLector = null;
+    let usuarioActivo = ""; 
+    let baseAlumnos = []; 
+    let colaOffline = JSON.parse(localStorage.getItem('colaAsistencia')) || [];
+    let ultimosEscaneos = {}; 
+    let escanerQRActivo = null; 
+    let ndefLector = null;
 
     async function iniciarSesion() {
       usuarioActivo = document.getElementById("nombrePrefecto").value.trim();
-      if(!usuarioActivo) return alert("Ingresa tu nombre");
+      if(!usuarioActivo) return alert("Por favor ingresa tu nombre");
       document.getElementById("msjCargando").classList.remove("hidden");
       
       try {
@@ -103,11 +113,12 @@
         localStorage.setItem("alumnosCache", JSON.stringify(baseAlumnos));
       } catch (err) {
         baseAlumnos = JSON.parse(localStorage.getItem("alumnosCache") || "[]");
-        if(baseAlumnos.length === 0) return alert("Error crítico sin internet.");
+        if(baseAlumnos.length === 0) return alert("Error al conectar. Verifica tu internet.");
       }
+
       document.getElementById("pantallaLogin").classList.add("hidden");
       document.getElementById("pantallaEscaneo").classList.remove("hidden");
-      document.getElementById("infoUsuario").innerText = "👤 " + usuarioActivo;
+      document.getElementById("infoUsuario").innerText = "👤 Prefecto(a): " + usuarioActivo;
       filtrarAlumnos(); 
     }
 
@@ -116,8 +127,8 @@
       const select = document.getElementById("selectAlumno"); select.innerHTML = ''; 
       const filtrados = baseAlumnos.filter(a => a.turno === turno && a.grado === grado && a.grupo === grupo);
       
-      if(filtrados.length === 0) return select.innerHTML = '<option value="">❌ No hay alumnos</option>';
-      select.innerHTML = '<option value="">-- Elige un alumno --</option>';
+      if(filtrados.length === 0) return select.innerHTML = '<option value="">❌ No hay alumnos en este grupo</option>';
+      select.innerHTML = '<option value="">-- Selecciona un alumno --</option>';
       filtrados.sort((a, b) => a.nombre.localeCompare(b.nombre)).forEach(a => {
         let opt = document.createElement("option"); opt.value = a.id; opt.text = a.nombre; select.appendChild(opt);
       });
@@ -134,14 +145,16 @@
       }
     }
 
+    // LECTURA NFC CONTINUA
     async function iniciarNFC() {
       if(escanerQRActivo) detenerQR();
-      if (!("NDEFReader" in window)) return alert("NFC no soportado.");
+      if (!("NDEFReader" in window)) return alert("Este dispositivo o navegador no soporta NFC.");
       const estado = document.getElementById("estadoNFC");
+      
       try {
         if (!ndefLector) ndefLector = new NDEFReader();
         await ndefLector.scan();
-        estado.innerText = "ESCANEO CONTINUO ACTIVADO\nAcerca tarjeta...";
+        estado.innerText = "ESCANEO CONTINUO ACTIVADO\nAcerca la tarjeta...";
         estado.className = "text-center text-sm font-bold h-10 flex items-center justify-center mb-2 text-indigo-600 animate-pulse";
         
         ndefLector.onreading = event => {
@@ -157,14 +170,15 @@
             }, 1500);
           }
         };
-      } catch (error) { estado.innerText = "Error NFC."; }
+      } catch (error) { estado.innerText = "Error al iniciar NFC."; }
     }
 
+    // LECTURA CÓDIGO QR
     function iniciarQR() {
       const qrContainer = document.getElementById("qr-reader");
       if (!qrContainer.classList.contains("hidden")) return detenerQR();
       qrContainer.classList.remove("hidden");
-      document.getElementById("estadoNFC").innerText = "Apunta al código QR...";
+      document.getElementById("estadoNFC").innerText = "Apunta la cámara al código QR...";
       
       escanerQRActivo = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: 250 });
       escanerQRActivo.render((decodedText) => {
@@ -189,7 +203,7 @@
       if (accion === "SALIDA_ANTICIPADA") {
         const quien = document.getElementById("inputQuienLleva").value.trim();
         const motivo = document.getElementById("inputMotivoSalida").value.trim();
-        if(!quien || !motivo) return mostrarToast("❌ Llena quién se lo lleva y el motivo.", true);
+        if(!quien || !motivo) return mostrarToast("❌ Completa quién se lo lleva y el motivo.", true);
         obsFinal = "Se lo lleva: " + quien + " | Motivo: " + motivo;
       } else {
         obsFinal = document.getElementById("inputObservaciones").value.trim();
@@ -197,7 +211,6 @@
 
       procesarEscaneo(idNfc, accion, obsFinal); 
       
-      // Limpiar campos
       document.getElementById("selectAlumno").value = "";
       document.getElementById("inputQuienLleva").value = "";
       document.getElementById("inputMotivoSalida").value = "";
@@ -208,7 +221,7 @@
       const ahora = Date.now();
       if (ultimosEscaneos[idNfc] && (ahora - ultimosEscaneos[idNfc] < 60000)) {
         if ("vibrate" in navigator) navigator.vibrate([100, 50, 100]);
-        return mostrarToast("⚠️ Ya se registró recientemente", true);
+        return mostrarToast("⚠️ Registrado recientemente", true);
       }
       ultimosEscaneos[idNfc] = ahora;
       if ("vibrate" in navigator) navigator.vibrate(200);
@@ -220,14 +233,21 @@
       mostrarToast("Enviando...\n" + nombreStr, false);
 
       if (navigator.onLine) enviarAGoogle(payload);
-      else { colaOffline.push(payload); localStorage.setItem('colaAsistencia', JSON.stringify(colaOffline)); mostrarToast("💾 Guardado Offline\n" + nombreStr, false); }
+      else { 
+        colaOffline.push(payload); 
+        localStorage.setItem('colaAsistencia', JSON.stringify(colaOffline)); 
+        mostrarToast("💾 Guardado Offline\n" + nombreStr, false); 
+      }
     }
 
     function enviarAGoogle(payload) {
       fetch(APPS_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload), redirect: "follow" })
       .then(res => res.json())
       .then(data => mostrarToast(data.message, data.status === "ERROR"))
-      .catch(err => { colaOffline.push(payload); localStorage.setItem('colaAsistencia', JSON.stringify(colaOffline)); });
+      .catch(err => { 
+        colaOffline.push(payload); 
+        localStorage.setItem('colaAsistencia', JSON.stringify(colaOffline)); 
+      });
     }
 
     let toastTimeout;
