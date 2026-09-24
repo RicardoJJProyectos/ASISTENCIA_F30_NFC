@@ -141,7 +141,6 @@
       if(!usuarioActivo) return alert("Por favor ingresa tu nombre");
       document.getElementById("msjCargando").classList.remove("hidden");
       
-      // Activa audio en navegador al hacer click en el login
       if (audioCtx.state === 'suspended') audioCtx.resume();
 
       try {
@@ -210,16 +209,31 @@
       } catch (error) { estado.innerText = "Error al iniciar NFC."; }
     }
 
+    // ESCÁNER QR EN MODO CONTINUO
     function iniciarQR() {
       const qrContainer = document.getElementById("qr-reader");
       if (!qrContainer.classList.contains("hidden")) return detenerQR();
       qrContainer.classList.remove("hidden");
-      document.getElementById("estadoNFC").innerText = "Apunta la cámara al código QR...";
+      
+      const estado = document.getElementById("estadoNFC");
+      estado.innerText = "ESCANEO QR CONTINUO ACTIVADO\nApunta la cámara...";
+      estado.className = "text-center text-sm font-bold h-10 flex items-center justify-center mb-2 text-gray-800 animate-pulse";
       
       escanerQRActivo = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: 250 });
       escanerQRActivo.render((decodedText) => {
         procesarEscaneo(decodedText, "ESCANEO_QR", "");
-        detenerQR();
+        
+        // Confirmación visual sin apagar la cámara
+        estado.innerText = "¡QR LEÍDO! ✅";
+        estado.className = "text-center text-xl font-bold h-10 flex items-center justify-center mb-2 text-green-600";
+        
+        setTimeout(() => {
+          if (escanerQRActivo) {
+            estado.innerText = "LISTO PARA EL SIGUIENTE QR...\nApunta la cámara";
+            estado.className = "text-center text-sm font-bold h-10 flex items-center justify-center mb-2 text-gray-800 animate-pulse";
+          }
+        }, 1500);
+        
       }, () => {});
     }
     
