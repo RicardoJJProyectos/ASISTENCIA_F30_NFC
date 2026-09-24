@@ -97,28 +97,47 @@
     let ultimosEscaneos = {}; 
     let escanerQRActivo = null; 
     let ndefLector = null;
+    let qrEnPausa = false; // Control de espera entre escaneos QR
 
-    // SINTETIZADOR DE SONIDO (WEB AUDIO API)
+    // SINTETIZADOR DE SONIDO 8-BITS (WEB AUDIO API)
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
+    // SONIDO ESTILO MARIO BROS 1UP (ÉXITO)
     function reproducirSonidoExito() {
       if (audioCtx.state === 'suspended') audioCtx.resume();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
       
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.12);
+      const notas = [
+        { freq: 659.25, dur: 0.08 }, // E5
+        { freq: 783.99, dur: 0.08 }, // G5
+        { freq: 1318.51, dur: 0.08 },// E6
+        { freq: 1046.50, dur: 0.08 },// C6
+        { freq: 1174.66, dur: 0.08 },// D6
+        { freq: 1567.98, dur: 0.15 } // G6
+      ];
       
-      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
+      let tiempoInicio = audioCtx.currentTime;
       
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.12);
+      notas.forEach(nota => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        
+        osc.type = 'square'; // Tipo 'square' da el sonido de sintetizador 8-bits retro
+        osc.frequency.setValueAtTime(nota.freq, tiempoInicio);
+        
+        gain.gain.setValueAtTime(0.12, tiempoInicio);
+        gain.gain.exponentialRampToValueAtTime(0.001, tiempoInicio + nota.dur - 0.01);
+        
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        
+        osc.start(tiempoInicio);
+        osc.stop(tiempoInicio + nota.dur);
+        
+        tiempoInicio += nota.dur;
+      });
     }
 
+    // SONIDO DE ERROR
     function reproducirSonidoError() {
       if (audioCtx.state === 'suspended') audioCtx.resume();
       const osc = audioCtx.createOscillator();
@@ -127,7 +146,7 @@
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(180, audioCtx.currentTime);
       
-      gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
       
       osc.connect(gain);
@@ -203,36 +222,42 @@
             setTimeout(() => {
               estado.innerText = "LISTO PARA LA SIGUIENTE...\nAcerca tarjeta";
               estado.className = "text-center text-sm font-bold h-10 flex items-center justify-center mb-2 text-indigo-600 animate-pulse";
-            }, 1500);
+            }, 1200);
           }
         };
       } catch (error) { estado.innerText = "Error al iniciar NFC."; }
     }
 
-    // ESCÁNER QR EN MODO CONTINUO
+    // ESCÁNER QR CON ESPERA DE 1 SEGUNDO
     function iniciarQR() {
       const qrContainer = document.getElementById("qr-reader");
       if (!qrContainer.classList.contains("hidden")) return detenerQR();
       qrContainer.classList.remove("hidden");
       
       const estado = document.getElementById("estadoNFC");
-      estado.innerText = "ESCANEO QR CONTINUO ACTIVADO\nApunta la cámara...";
+      estado.innerText = "ESCANEO QR ACTIVADO\nApunta la cámara...";
       estado.className = "text-center text-sm font-bold h-10 flex items-center justify-center mb-2 text-gray-800 animate-pulse";
       
       escanerQRActivo = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: 250 });
+      
       escanerQRActivo.render((decodedText) => {
+        // Ignorar lecturas si está en el periodo de espera de 1 segundo
+        if (qrEnPausa) return;
+        
+        qrEnPausa = true; // Activar pausa
         procesarEscaneo(decodedText, "ESCANEO_QR", "");
         
-        // Confirmación visual sin apagar la cámara
-        estado.innerText = "¡QR LEÍDO! ✅";
+        estado.innerText = "¡QR LEÍDO! 🍄";
         estado.className = "text-center text-xl font-bold h-10 flex items-center justify-center mb-2 text-green-600";
         
+        // Esperar 1 segundo exacto antes de permitir el siguiente escaneo
         setTimeout(() => {
+          qrEnPausa = false;
           if (escanerQRActivo) {
             estado.innerText = "LISTO PARA EL SIGUIENTE QR...\nApunta la cámara";
             estado.className = "text-center text-sm font-bold h-10 flex items-center justify-center mb-2 text-gray-800 animate-pulse";
           }
-        }, 1500);
+        }, 1000);
         
       }, () => {});
     }
@@ -241,6 +266,7 @@
       if(escanerQRActivo) { escanerQRActivo.clear(); escanerQRActivo = null; } 
       document.getElementById("qr-reader").classList.add("hidden"); 
       document.getElementById("estadoNFC").innerText = ""; 
+      qrEnPausa = false;
     }
 
     function registrarManual() {
@@ -314,7 +340,7 @@
       toast.classList.remove("hidden");
       
       clearTimeout(toastTimeout);
-      toastTimeout = setTimeout(() => { toast.classList.add("hidden"); }, 3500);
+      toastTimeout = setTimeout(() => { toast.classList.add("hidden"); }, 2500);
     }
   </script>
 </body>
