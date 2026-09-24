@@ -89,9 +89,6 @@
   </div>
 
   <script>
-    // =================================================================
-    // ⚠️ PEGA AQUÍ LA URL DE TU WEB APP DE GOOGLE APPS SCRIPT
-    // =================================================================
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwii_5UC-OW04OZeNIwIFFztie4H-kZQesmnpsBKmrll0N26u7EZRLQEOB0XTTTlv_p/exec"; 
     
     let usuarioActivo = ""; 
@@ -101,11 +98,52 @@
     let escanerQRActivo = null; 
     let ndefLector = null;
 
+    // SINTETIZADOR DE SONIDO (WEB AUDIO API)
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function reproducirSonidoExito() {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.12);
+      
+      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
+      
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.12);
+    }
+
+    function reproducirSonidoError() {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+      
+      gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+      
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.25);
+    }
+
     async function iniciarSesion() {
       usuarioActivo = document.getElementById("nombrePrefecto").value.trim();
       if(!usuarioActivo) return alert("Por favor ingresa tu nombre");
       document.getElementById("msjCargando").classList.remove("hidden");
       
+      // Activa audio en navegador al hacer click en el login
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+
       try {
         const respuesta = await fetch(APPS_SCRIPT_URL + "?action=getAlumnos", { redirect: "follow" });
         const textoData = await respuesta.text(); 
@@ -145,7 +183,6 @@
       }
     }
 
-    // LECTURA NFC CONTINUA
     async function iniciarNFC() {
       if(escanerQRActivo) detenerQR();
       if (!("NDEFReader" in window)) return alert("Este dispositivo o navegador no soporta NFC.");
@@ -173,7 +210,6 @@
       } catch (error) { estado.innerText = "Error al iniciar NFC."; }
     }
 
-    // LECTURA CÓDIGO QR
     function iniciarQR() {
       const qrContainer = document.getElementById("qr-reader");
       if (!qrContainer.classList.contains("hidden")) return detenerQR();
@@ -252,10 +288,17 @@
 
     let toastTimeout;
     function mostrarToast(mensaje, esError) {
+      if (esError) {
+        reproducirSonidoError();
+      } else {
+        reproducirSonidoExito();
+      }
+
       const toast = document.getElementById("toastNotificacion");
       toast.innerText = mensaje;
       toast.className = `fixed top-4 left-1/2 transform -translate-x-1/2 px-6 py-4 rounded-xl shadow-2xl font-bold text-center z-50 whitespace-pre-line text-lg w-11/12 max-w-sm ${esError ? 'bg-red-600 text-white' : 'bg-blue-600 text-white'}`;
       toast.classList.remove("hidden");
+      
       clearTimeout(toastTimeout);
       toastTimeout = setTimeout(() => { toast.classList.add("hidden"); }, 3500);
     }
