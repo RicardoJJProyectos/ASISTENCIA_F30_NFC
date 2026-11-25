@@ -6,7 +6,10 @@
   <title>Asistencia Escolar - Foránea 30</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/html5-qrcode"></script>
-  <style> body { background-color: #f3f4f6; } </style>
+  <style>
+    body { background-color: #f3f4f6; }
+    #qr-reader video { border-radius: 0.5rem; object-fit: cover; }
+  </style>
 </head>
 <body class="p-4 font-sans text-gray-800">
 
@@ -20,9 +23,12 @@
       <p class="text-xs text-gray-500 mb-6 font-semibold">SISTEMA DE ASISTENCIA ESCOLAR</p>
 
       <label class="block text-sm font-bold text-gray-700 text-left">Nombre de quien registra:</label>
-      <input type="text" id="nombrePrefecto" class="mt-2 block w-full rounded-md border-gray-400 shadow-sm border p-3 text-left" placeholder="Ej. Prof. Tizok">
+      <input type="text" id="nombrePrefecto" class="mt-1 mb-3 block w-full rounded-md border-gray-400 shadow-sm border p-3 text-left" placeholder="Ej. Prof. Tizok">
+
+      <label class="block text-sm font-bold text-gray-700 text-left">PIN de acceso escolar:</label>
+      <input type="password" id="pinAcceso" inputmode="numeric" maxlength="10" class="mt-1 block w-full rounded-md border-gray-400 shadow-sm border p-3 text-left tracking-widest" placeholder="••••">
       
-      <button onclick="iniciarSesion()" class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold text-lg transition-colors">
+      <button id="btnIngresar" onclick="iniciarSesion()" class="mt-5 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-3 rounded-lg font-bold text-lg transition-colors">
         Ingresar
       </button>
       <p id="msjCargando" class="text-sm text-center text-blue-600 mt-4 font-bold hidden">Conectando, espera...</p>
@@ -30,26 +36,50 @@
 
     <!-- PANTALLA PRINCIPAL -->
     <div id="pantallaEscaneo" class="hidden">
-      <p class="text-center text-sm font-bold mb-4 bg-green-100 text-green-800 p-2 rounded" id="infoUsuario"></p>
-
-      <!-- BOTONES ESCANER -->
-      <div class="grid grid-cols-2 gap-4 mb-2">
-        <button onclick="iniciarNFC()" class="bg-indigo-600 hover:bg-indigo-700 text-white py-5 rounded-xl font-bold flex flex-col items-center shadow-lg transition transform hover:scale-105">
-          <span class="text-4xl mb-2">📡</span> NFC Continuo
-        </button>
-        <button onclick="iniciarQR()" class="bg-gray-800 hover:bg-gray-900 text-white py-5 rounded-xl font-bold flex flex-col items-center shadow-lg transition transform hover:scale-105">
-          <span class="text-4xl mb-2">📷</span> Escáner QR
+      <!-- Barra superior de usuario y botón salir -->
+      <div class="flex items-center justify-between bg-green-100 text-green-800 px-3 py-2 rounded mb-3">
+        <p class="text-sm font-bold truncate" id="infoUsuario"></p>
+        <button onclick="cerrarSesion()" class="text-xs bg-white/80 hover:bg-white text-green-900 font-bold px-2.5 py-1 rounded border border-green-300 ml-2 shrink-0">
+          Salir
         </button>
       </div>
 
-      <div id="estadoNFC" class="text-center text-sm font-bold h-10 flex items-center justify-center mb-2 text-gray-600"></div>
-      <div id="qr-reader" class="w-full mb-4 hidden rounded-lg overflow-hidden border-2 border-gray-300"></div>
+      <!-- Banner de registros pendientes offline -->
+      <div id="bannerOffline" class="hidden mb-3 bg-amber-100 border border-amber-300 text-amber-900 px-3 py-2 rounded-lg flex items-center justify-between text-xs font-bold">
+        <span id="textoOffline">⚠️ 0 registros pendientes sin red</span>
+        <button onclick="sincronizarOffline()" class="bg-amber-600 hover:bg-amber-700 text-white px-2.5 py-1 rounded shadow-sm">
+          🔄 Sincronizar
+        </button>
+      </div>
+
+      <!-- BOTONES ESCÁNER -->
+      <div class="grid grid-cols-2 gap-4 mb-2">
+        <button id="btnNFC" onclick="iniciarNFC()" class="bg-indigo-600 hover:bg-indigo-700 text-white py-5 rounded-xl font-bold flex flex-col items-center shadow-lg transition transform active:scale-95">
+          <span class="text-4xl mb-2">📡</span> NFC Continuo
+        </button>
+        <button id="btnQR" onclick="alternarQR()" class="bg-gray-800 hover:bg-gray-900 text-white py-5 rounded-xl font-bold flex flex-col items-center shadow-lg transition transform active:scale-95">
+          <span id="iconoQR" class="text-4xl mb-2">📷</span>
+          <span id="textoBtnQR">Escáner QR</span>
+        </button>
+      </div>
+
+      <div id="estadoNFC" class="text-center text-sm font-bold h-10 flex items-center justify-center mb-2 text-gray-600 whitespace-pre-line"></div>
+      <div id="qr-reader" class="w-full mb-4 hidden rounded-lg overflow-hidden border-2 border-gray-300 bg-black"></div>
 
       <!-- SECCIÓN REGISTRO MANUAL -->
       <div class="border-2 border-gray-200 bg-gray-50 p-4 rounded-lg mt-2">
         <h3 class="text-lg font-bold text-gray-800 mb-3 border-b pb-2 text-center">📝 Registro Manual</h3>
         
-        <div class="grid grid-cols-3 gap-2 mb-4">
+        <!-- Buscador rápido por nombre o ID -->
+        <div class="relative mb-3">
+          <input type="text" id="buscadorAlumno" oninput="filtrarAlumnos()" class="w-full border-2 border-indigo-300 focus:border-indigo-500 focus:outline-none p-2.5 pr-9 rounded-lg bg-white text-sm font-semibold" placeholder="🔍 Buscar por apellido o nombre...">
+          <button type="button" id="btnLimpiarBusqueda" onclick="limpiarBusqueda()" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 font-bold text-sm">
+            ✕
+          </button>
+        </div>
+
+        <!-- Filtros por grupo (se atenúan cuando hay búsqueda activa) -->
+        <div id="contenedorFiltrosGrupo" class="grid grid-cols-3 gap-2 mb-3 transition-opacity">
           <select id="filtroTurno" onchange="filtrarAlumnos()" class="border-2 border-gray-300 p-2 rounded font-bold text-sm bg-white">
             <option value="MATUTINO">Matutino</option>
             <option value="VESPERTINO">Vespertino</option>
@@ -66,53 +96,64 @@
           </select>
         </div>
 
-        <select id="selectAlumno" class="w-full border-2 border-blue-400 p-2 rounded mb-4 bg-white font-bold text-gray-700">
-          <option value="">-- Cursos cargando... --</option>
+        <select id="selectAlumno" class="w-full border-2 border-blue-400 p-2.5 rounded mb-3 bg-white font-bold text-gray-700 text-sm">
+          <option value="">-- Cargando alumnos... --</option>
         </select>
 
-        <select id="selectAccion" onchange="alternarCamposSalida()" class="w-full border-2 border-gray-300 p-2 rounded mb-4 font-bold bg-white">
+        <select id="selectAccion" onchange="alternarCamposSalida()" class="w-full border-2 border-gray-300 p-2.5 rounded mb-3 font-bold bg-white text-sm">
           <option value="MANUAL">✅ Asistencia (Olvidó Tarjeta)</option>
           <option value="JUSTIFICADA">⚠️ Falta Justificada</option>
           <option value="SALIDA_ANTICIPADA">🏃 Salida Anticipada</option>
         </select>
 
         <!-- Campo Observaciones normal -->
-        <input type="text" id="inputObservaciones" class="w-full border-2 border-gray-300 p-2 rounded mb-4" placeholder="Observaciones (Opcional)...">
+        <input type="text" id="inputObservaciones" class="w-full border-2 border-gray-300 p-2.5 rounded mb-4 text-sm" placeholder="Observaciones (Opcional)...">
 
         <!-- Formulario especial para Salida Anticipada -->
         <div id="camposSalidaAnticipada" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-lg shadow-sm">
           <label class="block text-xs font-bold text-red-700 mb-1">¿Quién se lo lleva?</label>
-          <input type="text" id="inputQuienLleva" class="w-full border border-red-300 p-2 rounded mb-2 bg-white" placeholder="Ej. Su madre, María Gómez">
+          <input type="text" id="inputQuienLleva" class="w-full border border-red-300 p-2 rounded mb-2 bg-white text-sm" placeholder="Ej. Su madre, María Gómez">
           
           <label class="block text-xs font-bold text-red-700 mb-1">Motivo de salida:</label>
-          <input type="text" id="inputMotivoSalida" class="w-full border border-red-300 p-2 rounded bg-white" placeholder="Ej. Cita médica">
+          <input type="text" id="inputMotivoSalida" class="w-full border border-red-300 p-2 rounded bg-white text-sm" placeholder="Ej. Cita médica">
         </div>
 
-        <button onclick="registrarManual()" class="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-lg font-bold shadow-md text-lg">
+        <button id="btnGuardarManual" onclick="registrarManual()" class="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 text-white py-3 rounded-lg font-bold shadow-md text-lg transition-colors">
           💾 Guardar Registro
         </button>
       </div>
       
       <!-- NOTIFICACIÓN TIPO TOAST -->
-      <div id="toastNotificacion" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-xl shadow-2xl font-bold text-center hidden transition-opacity duration-300 z-50 whitespace-pre-line"></div>
+      <div id="toastNotificacion" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-xl shadow-2xl font-bold text-center hidden transition-opacity duration-300 z-50 whitespace-pre-line max-w-xs w-11/12"></div>
     </div>
   </div>
 
   <script>
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwii_5UC-OW04OZeNIwIFFztie4H-kZQesmnpsBKmrll0N26u7EZRLQEOB0XTTTlv_p/exec"; 
     
-    let usuarioActivo = ""; 
+    let usuarioActivo = "";
+    let pinActivo = "";
     let baseAlumnos = []; 
-    let colaOffline = JSON.parse(localStorage.getItem('colaAsistencia')) || [];
+    let colaOffline = JSON.parse(localStorage.getItem('colaAsistencia') || "[]");
     let ultimosEscaneos = {}; 
-    let escanerQRActivo = null; 
+    let html5QrCode = null;
+    let qrCorriendo = false;
     let ndefLector = null;
     let qrEnPausa = false;
+    let toastTimer = null;
+    let sincronizando = false;
 
     // SINTETIZADOR DE SONIDO 8-BITS (WEB AUDIO API)
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
+    function vibrar(patron) {
+      if ("vibrate" in navigator) {
+        try { navigator.vibrate(patron); } catch (e) {}
+      }
+    }
+
     function reproducirSonidoExito() {
+      vibrar(100);
       if (audioCtx.state === 'suspended') audioCtx.resume();
       
       const notas = [
@@ -125,84 +166,191 @@
       ];
       
       let tiempoInicio = audioCtx.currentTime;
-      
       notas.forEach(nota => {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        
         osc.type = 'square';
         osc.frequency.setValueAtTime(nota.freq, tiempoInicio);
-        
         gain.gain.setValueAtTime(0.12, tiempoInicio);
         gain.gain.exponentialRampToValueAtTime(0.001, tiempoInicio + nota.dur - 0.01);
-        
         osc.connect(gain);
         gain.connect(audioCtx.destination);
-        
         osc.start(tiempoInicio);
         osc.stop(tiempoInicio + nota.dur);
-        
         tiempoInicio += nota.dur;
       });
     }
 
     function reproducirSonidoError() {
+      vibrar([150, 80, 150]);
       if (audioCtx.state === 'suspended') audioCtx.resume();
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
-      
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(180, audioCtx.currentTime);
-      
       gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
-      
       osc.connect(gain);
       gain.connect(audioCtx.destination);
       osc.start();
       osc.stop(audioCtx.currentTime + 0.25);
     }
 
-    async function iniciarSesion() {
+    // Restaurar sesión si el prefecto recargó la página por accidente
+    window.addEventListener('DOMContentLoaded', () => {
+      const sesionNombre = sessionStorage.getItem('f30_usuario');
+      const sesionPin = sessionStorage.getItem('f30_pin');
+      if (sesionNombre) {
+        document.getElementById("nombrePrefecto").value = sesionNombre;
+        document.getElementById("pinAcceso").value = sesionPin || "";
+        iniciarSesion(true);
+      }
+    });
+
+    async function iniciarSesion(esRestauracion = false) {
       usuarioActivo = document.getElementById("nombrePrefecto").value.trim();
-      if(!usuarioActivo) return alert("Por favor ingresa tu nombre");
-      document.getElementById("msjCargando").classList.remove("hidden");
+      pinActivo = document.getElementById("pinAcceso").value.trim();
+
+      if (!usuarioActivo) return alert("Por favor ingresa tu nombre.");
+      if (!pinActivo) return alert("Por favor ingresa el PIN escolar.");
+
+      const btnIngresar = document.getElementById("btnIngresar");
+      const msjCargando = document.getElementById("msjCargando");
+      btnIngresar.disabled = true;
+      msjCargando.classList.remove("hidden");
       
-      if (audioCtx.state === 'suspended') audioCtx.resume();
+      if (!esRestauracion && audioCtx.state === 'suspended') audioCtx.resume();
 
       try {
-        const respuesta = await fetch(APPS_SCRIPT_URL + "?action=getAlumnos", { redirect: "follow" });
-        const textoData = await respuesta.text(); 
-        baseAlumnos = JSON.parse(textoData);
+        const url = `${APPS_SCRIPT_URL}?action=getAlumnos&pin=${encodeURIComponent(pinActivo)}`;
+        const respuesta = await fetch(url, { redirect: "follow" });
+        const data = await respuesta.json();
+
+        // Si Apps Script rechaza el PIN, bloquea el acceso incluso si hay caché local
+        if (!Array.isArray(data) && data.status === "ERROR") {
+          reproducirSonidoError();
+          sessionStorage.removeItem('f30_usuario');
+          sessionStorage.removeItem('f30_pin');
+          btnIngresar.disabled = false;
+          msjCargando.classList.add("hidden");
+          return alert(data.message || "PIN incorrecto.");
+        }
+
+        baseAlumnos = data;
         localStorage.setItem("alumnosCache", JSON.stringify(baseAlumnos));
       } catch (err) {
         baseAlumnos = JSON.parse(localStorage.getItem("alumnosCache") || "[]");
-        if(baseAlumnos.length === 0) return alert("Error al conectar. Verifica tu internet.");
+        if (baseAlumnos.length === 0) {
+          btnIngresar.disabled = false;
+          msjCargando.classList.add("hidden");
+          return alert("Error al conectar y no hay datos guardados. Verifica tu internet.");
+        }
       }
 
+      sessionStorage.setItem('f30_usuario', usuarioActivo);
+      sessionStorage.setItem('f30_pin', pinActivo);
+
+      btnIngresar.disabled = false;
+      msjCargando.classList.add("hidden");
       document.getElementById("pantallaLogin").classList.add("hidden");
       document.getElementById("pantallaEscaneo").classList.remove("hidden");
       document.getElementById("infoUsuario").innerText = "👤 Prefecto(a): " + usuarioActivo;
-      filtrarAlumnos(); 
+
+      actualizarBannerOffline();
+      filtrarAlumnos();
+      if (navigator.onLine && colaOffline.length > 0) sincronizarOffline();
+    }
+
+    async function cerrarSesion() {
+      await detenerQR();
+      sessionStorage.removeItem('f30_usuario');
+      sessionStorage.removeItem('f30_pin');
+      usuarioActivo = "";
+      pinActivo = "";
+      document.getElementById("pinAcceso").value = "";
+      document.getElementById("pantallaEscaneo").classList.add("hidden");
+      document.getElementById("pantallaLogin").classList.remove("hidden");
+    }
+
+    function normalizarTexto(texto) {
+      return String(texto || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase()
+        .trim();
+    }
+
+    function limpiarBusqueda() {
+      document.getElementById("buscadorAlumno").value = "";
+      filtrarAlumnos();
     }
 
     function filtrarAlumnos() {
-      const turno = document.getElementById("filtroTurno").value, 
-            grado = document.getElementById("filtroGrado").value, 
-            grupo = document.getElementById("filtroGrupo").value;
-      const select = document.getElementById("selectAlumno"); 
-      select.innerHTML = ''; 
-      
+      const textoBusqueda = normalizarTexto(document.getElementById("buscadorAlumno").value);
+      const btnLimpiar = document.getElementById("btnLimpiarBusqueda");
+      const contFiltros = document.getElementById("contenedorFiltrosGrupo");
+      const select = document.getElementById("selectAlumno");
+      select.innerHTML = '';
+
+      if (textoBusqueda.length > 0) {
+        btnLimpiar.classList.remove("hidden");
+      } else {
+        btnLimpiar.classList.add("hidden");
+      }
+
+      // Modo búsqueda rápida por nombre/ID (a partir de 2 letras)
+      if (textoBusqueda.length >= 2) {
+        contFiltros.classList.add("opacity-40", "pointer-events-none");
+
+        const coincidencias = baseAlumnos.filter(a => {
+          const nomNorm = normalizarTexto(a.nombre);
+          const idNorm = normalizarTexto(a.id);
+          return nomNorm.includes(textoBusqueda) || idNorm.includes(textoBusqueda);
+        });
+
+        if (coincidencias.length === 0) {
+          select.innerHTML = '<option value="">❌ Sin coincidencias con "' + textoBusqueda + '"</option>';
+          return;
+        }
+
+        if (coincidencias.length > 1) {
+          select.innerHTML = `<option value="">-- ${coincidencias.length} alumnos encontrados --</option>`;
+        }
+
+        coincidencias
+          .sort((a, b) => a.nombre.localeCompare(b.nombre))
+          .forEach(a => {
+            const opt = document.createElement("option");
+            opt.value = a.id;
+            const turnoCorto = a.turno ? a.turno.substring(0, 3) : "";
+            opt.text = `${a.nombre} (${a.grado}º${a.grupo} ${turnoCorto})`;
+            select.appendChild(opt);
+          });
+        return;
+      }
+
+      // Modo filtro tradicional por Turno / Grado / Grupo
+      contFiltros.classList.remove("opacity-40", "pointer-events-none");
+      const turno = document.getElementById("filtroTurno").value;
+      const grado = document.getElementById("filtroGrado").value;
+      const grupo = document.getElementById("filtroGrupo").value;
+
       const filtrados = baseAlumnos.filter(a => a.turno === turno && a.grado === grado && a.grupo === grupo);
-      
-      if(filtrados.length === 0) return select.innerHTML = '<option value="">❌ No hay alumnos en este grupo</option>';
+
+      if (filtrados.length === 0) {
+        select.innerHTML = '<option value="">❌ No hay alumnos en este grupo</option>';
+        return;
+      }
+
       select.innerHTML = '<option value="">-- Selecciona un alumno --</option>';
-      filtrados.sort((a, b) => a.nombre.localeCompare(b.nombre)).forEach(a => {
-        let opt = document.createElement("option"); 
-        opt.value = a.id; 
-        opt.text = a.nombre; 
-        select.appendChild(opt);
-      });
+      filtrados
+        .sort((a, b) => a.nombre.localeCompare(b.nombre))
+        .forEach(a => {
+          const opt = document.createElement("option");
+          opt.value = a.id;
+          opt.text = a.nombre;
+          select.appendChild(opt);
+        });
     }
 
     function alternarCamposSalida() {
@@ -217,7 +365,7 @@
     }
 
     async function iniciarNFC() {
-      if(escanerQRActivo) detenerQR();
+      if (qrCorriendo) await detenerQR();
       if (!("NDEFReader" in window)) return alert("Este dispositivo o navegador no soporta NFC.");
       const estado = document.getElementById("estadoNFC");
       
@@ -225,62 +373,99 @@
         if (!ndefLector) ndefLector = new NDEFReader();
         await ndefLector.scan();
         estado.innerText = "ESCANEO CONTINUO ACTIVADO\nAcerca la tarjeta...";
-        estado.className = "text-center text-sm font-bold h-10 flex items-center justify-center mb-2 text-indigo-600 animate-pulse";
+        estado.className = "text-center text-sm font-bold h-10 flex items-center justify-center mb-2 text-indigo-600 animate-pulse whitespace-pre-line";
         
         ndefLector.onreading = event => {
           for (const record of event.message.records) {
-            const idNfc = new TextDecoder(record.encoding).decode(record.data);
+            const idNfc = new TextDecoder(record.encoding).decode(record.data).trim();
             procesarEscaneo(idNfc, "ESCANEO_NFC", "");
             
             estado.innerText = "¡LEÍDO! ✅";
             estado.className = "text-center text-xl font-bold h-10 flex items-center justify-center mb-2 text-green-600";
             setTimeout(() => {
               estado.innerText = "LISTO PARA LA SIGUIENTE...\nAcerca tarjeta";
-              estado.className = "text-center text-sm font-bold h-10 flex items-center justify-center mb-2 text-indigo-600 animate-pulse";
+              estado.className = "text-center text-sm font-bold h-10 flex items-center justify-center mb-2 text-indigo-600 animate-pulse whitespace-pre-line";
             }, 1200);
           }
         };
-      } catch (error) { estado.innerText = "Error al iniciar NFC."; }
+      } catch (error) {
+        estado.innerText = "Error al iniciar NFC. Verifica que esté activo.";
+      }
     }
 
-    function iniciarQR() {
+    async function alternarQR() {
+      if (qrCorriendo) {
+        await detenerQR();
+      } else {
+        await iniciarQR();
+      }
+    }
+
+    async function iniciarQR() {
       const qrContainer = document.getElementById("qr-reader");
-      if (!qrContainer.classList.contains("hidden")) return detenerQR();
-      qrContainer.classList.remove("hidden");
-      
       const estado = document.getElementById("estadoNFC");
-      estado.innerText = "ESCANEO QR ACTIVADO\nApunta la cámara...";
-      estado.className = "text-center text-sm font-bold h-10 flex items-center justify-center mb-2 text-gray-800 animate-pulse";
-      
-      escanerQRActivo = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: 250 });
-      
-      escanerQRActivo.render((decodedText) => {
-        if (qrEnPausa) return;
-        
-        qrEnPausa = true;
-        procesarEscaneo(decodedText, "ESCANEO_QR", "");
-        
-        estado.innerText = "¡QR LEÍDO! 🍄";
-        estado.className = "text-center text-xl font-bold h-10 flex items-center justify-center mb-2 text-green-600";
-        
-        setTimeout(() => {
-          qrEnPausa = false;
-          if (escanerQRActivo) {
-            estado.innerText = "LISTO PARA EL SIGUIENTE QR...\nApunta la cámara";
-            estado.className = "text-center text-sm font-bold h-10 flex items-center justify-center mb-2 text-gray-800 animate-pulse";
-          }
-        }, 1000);
-        
-      }, () => {});
+      qrContainer.classList.remove("hidden");
+
+      estado.innerText = "Abriendo cámara trasera...";
+      estado.className = "text-center text-sm font-bold h-10 flex items-center justify-center mb-2 text-gray-800 animate-pulse whitespace-pre-line";
+
+      try {
+        if (!html5QrCode) {
+          html5QrCode = new Html5Qrcode("qr-reader");
+        }
+
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 230, height: 230 } },
+          (decodedText) => {
+            if (qrEnPausa) return;
+            qrEnPausa = true;
+
+            procesarEscaneo(decodedText.trim(), "ESCANEO_QR", "");
+
+            estado.innerText = "¡QR LEÍDO! 🍄";
+            estado.className = "text-center text-xl font-bold h-10 flex items-center justify-center mb-2 text-green-600";
+
+            setTimeout(() => {
+              qrEnPausa = false;
+              if (qrCorriendo) {
+                estado.innerText = "LISTO PARA EL SIGUIENTE QR...\nApunta la cámara";
+                estado.className = "text-center text-sm font-bold h-10 flex items-center justify-center mb-2 text-gray-800 animate-pulse whitespace-pre-line";
+              }
+            }, 1100);
+          },
+          () => {}
+        );
+
+        qrCorriendo = true;
+        document.getElementById("iconoQR").innerText = "⏹️";
+        document.getElementById("textoBtnQR").innerText = "Cerrar QR";
+        document.getElementById("btnQR").classList.replace("bg-gray-800", "bg-red-700");
+        document.getElementById("btnQR").classList.replace("hover:bg-gray-900", "hover:bg-red-800");
+
+        estado.innerText = "ESCANEO QR ACTIVADO\nApunta la cámara trasera...";
+      } catch (err) {
+        qrContainer.classList.add("hidden");
+        estado.innerText = "";
+        alert("No se pudo acceder a la cámara. Verifica los permisos del navegador.");
+      }
     }
 
-    function detenerQR() { 
-      if(escanerQRActivo) { 
-        escanerQRActivo.clear(); 
-        escanerQRActivo = null; 
-      } 
+    async function detenerQR() {
+      if (html5QrCode && qrCorriendo) {
+        try {
+          await html5QrCode.stop();
+          html5QrCode.clear();
+        } catch (e) {}
+      }
+      qrCorriendo = false;
+      qrEnPausa = false;
       document.getElementById("qr-reader").classList.add("hidden");
       document.getElementById("estadoNFC").innerText = "";
+      document.getElementById("iconoQR").innerText = "📷";
+      document.getElementById("textoBtnQR").innerText = "Escáner QR";
+      document.getElementById("btnQR").classList.replace("bg-red-700", "bg-gray-800");
+      document.getElementById("btnQR").classList.replace("hover:bg-red-800", "hover:bg-gray-900");
     }
 
     async function procesarEscaneo(idNfc, metodo, observacionesExtra = "") {
@@ -294,10 +479,12 @@
       ultimosEscaneos[idNfc] = ahora;
 
       const payload = {
+        pin: pinActivo,
         idNfc: idNfc,
         accion: "ENTRADA",
         registradoPor: usuarioActivo,
-        observaciones: observacionesExtra || ("Vía " + metodo)
+        observaciones: observacionesExtra || ("Vía " + metodo),
+        timestamp: new Date().toISOString()
       };
 
       await enviarAlServidor(payload);
@@ -321,18 +508,30 @@
         observaciones = document.getElementById("inputObservaciones").value.trim();
       }
 
-      const payload = {
-        idNfc: idAlumno,
-        accion: accion,
-        registradoPor: usuarioActivo,
-        observaciones: observaciones
-      };
+      const btnGuardar = document.getElementById("btnGuardarManual");
+      btnGuardar.disabled = true;
+      btnGuardar.innerText = "⏳ Guardando...";
 
-      await enviarAlServidor(payload);
+      try {
+        const payload = {
+          pin: pinActivo,
+          idNfc: idAlumno,
+          accion: accion,
+          registradoPor: usuarioActivo,
+          observaciones: observaciones,
+          timestamp: new Date().toISOString()
+        };
 
-      document.getElementById("inputQuienLleva").value = "";
-      document.getElementById("inputMotivoSalida").value = "";
-      document.getElementById("inputObservaciones").value = "";
+        await enviarAlServidor(payload);
+
+        document.getElementById("inputQuienLleva").value = "";
+        document.getElementById("inputMotivoSalida").value = "";
+        document.getElementById("inputObservaciones").value = "";
+        limpiarBusqueda();
+      } finally {
+        btnGuardar.disabled = false;
+        btnGuardar.innerText = "💾 Guardar Registro";
+      }
     }
 
     async function enviarAlServidor(payload) {
@@ -353,53 +552,81 @@
           mostrarNotificacion(resData.message, false);
         } else {
           reproducirSonidoError();
-          mostrarNotificacion("❌ Error: " + resData.message, true);
+          mostrarNotificacion("❌ " + resData.message, true);
         }
       } catch (err) {
-        // En caso de fallo de red, se almacena localmente
+        // Sin conexión: guardar con la hora exacta (timestamp) en memoria local
         colaOffline.push(payload);
         localStorage.setItem('colaAsistencia', JSON.stringify(colaOffline));
+        actualizarBannerOffline();
         reproducirSonidoExito();
-        mostrarNotificacion("⚠️ Sin conexión. Guardado en memoria local (" + colaOffline.length + " pendientes)", false);
+        mostrarNotificacion("⚠️ Sin red. Guardado offline (" + colaOffline.length + " pendientes)", false);
       }
     }
 
     function mostrarNotificacion(mensaje, esError = false) {
       const toast = document.getElementById("toastNotificacion");
+      if (toastTimer) clearTimeout(toastTimer);
+
       toast.innerText = mensaje;
-      toast.className = `fixed top-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-xl shadow-2xl font-bold text-center z-50 whitespace-pre-line ${
+      toast.className = `fixed top-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-xl shadow-2xl font-bold text-center z-50 whitespace-pre-line max-w-xs w-11/12 ${
         esError ? "bg-red-600 text-white" : "bg-green-600 text-white"
       }`;
       toast.classList.remove("hidden");
 
-      setTimeout(() => {
+      toastTimer = setTimeout(() => {
         toast.classList.add("hidden");
       }, 3500);
     }
 
-    // Auto-sincronizar registros offline al recuperar Internet
+    function actualizarBannerOffline() {
+      const banner = document.getElementById("bannerOffline");
+      const texto = document.getElementById("textoOffline");
+      if (colaOffline.length > 0) {
+        texto.innerText = `⚠️ ${colaOffline.length} registro(s) pendientes sin red`;
+        banner.classList.remove("hidden");
+      } else {
+        banner.classList.add("hidden");
+      }
+    }
+
     window.addEventListener('online', sincronizarOffline);
 
     async function sincronizarOffline() {
-      if (colaOffline.length === 0) return;
-      mostrarNotificacion(`Sincronizando ${colaOffline.length} registros guardados offline...`, false);
+      if (colaOffline.length === 0 || sincronizando) return;
+      sincronizando = true;
+      mostrarNotificacion(`Sincronizando ${colaOffline.length} registros offline...`, false);
 
-      const copiaCola = [...colaOffline];
-      colaOffline = [];
-      localStorage.setItem('colaAsistencia', JSON.stringify(colaOffline));
+      const pendientes = [...colaOffline];
+      const fallidos = [];
+      let enviadosOk = 0;
 
-      for (const item of copiaCola) {
+      for (const item of pendientes) {
         try {
-          await fetch(APPS_SCRIPT_URL, {
+          item.pin = item.pin || pinActivo;
+          const resp = await fetch(APPS_SCRIPT_URL, {
             method: "POST",
             mode: "cors",
             headers: { "Content-Type": "text/plain;charset=utf-8" },
             body: JSON.stringify(item)
           });
+          await resp.json();
+          enviadosOk++;
         } catch (e) {
-          colaOffline.push(item);
-          localStorage.setItem('colaAsistencia', JSON.stringify(colaOffline));
+          fallidos.push(item);
         }
+      }
+
+      colaOffline = fallidos;
+      localStorage.setItem('colaAsistencia', JSON.stringify(colaOffline));
+      actualizarBannerOffline();
+      sincronizando = false;
+
+      if (enviadosOk > 0 && fallidos.length === 0) {
+        reproducirSonidoExito();
+        mostrarNotificacion(`✅ ${enviadosOk} registros sincronizados correctamente`, false);
+      } else if (fallidos.length > 0) {
+        mostrarNotificacion(`⚠️ Quedan ${fallidos.length} registros pendientes por falta de red`, true);
       }
     }
   </script>
